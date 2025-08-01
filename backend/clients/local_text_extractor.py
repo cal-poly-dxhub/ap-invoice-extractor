@@ -131,7 +131,8 @@ class LocalTextExtractor:
                 "extraction_metadata": {
                     "extractor": "PyPDF2",
                     "timestamp": time.time(),
-                    "file_size_bytes": len(pdf_bytes)
+                    "file_size_bytes": len(pdf_bytes),
+                    "total_pages": total_pages  # Add page count to metadata
                 }
             }
             
