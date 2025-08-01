@@ -1,32 +1,36 @@
-# 🧾 Invoice Extraction & Verification App
+# Invoice Processing System
 
-This project automates invoice processing using Amazon Bedrock's Claude 3 LLM to extract key 
-invoice fields from PDFs and verify their accuracy. It reduces manual work by flagging only 
-uncertain cases for human review.
+AI-powered invoice processing application that extracts structured data from PDF invoices using Amazon Bedrock models and provides real-time chat analysis.
 
----
+## Features
 
-## 🚀 Features
+- PDF invoice upload and processing
+- Multi-page document support
+- Intelligent text extraction with Nova Lite and Claude 3.5 Sonnet fallback
+- Structured data extraction (vendor, amounts, line items, dates)
+- Real-time chat interface for invoice analysis
+- PDF preview with zoom and navigation
+- Session-based document management
+- Semantic search across uploaded documents
 
-- Upload PDF invoices
-- Extract fields using **Claude 3 Haiku** via **Amazon Bedrock**
-- Auto-verification using a second LLM ("LLM judge")
-- Human-in-the-loop correction UI
-- Final export to CSV or xlsx
-- Built with **React** frontend + **AWS serverless backend**
+## Tech Stack
 
----
+**Frontend**
+- React with Tailwind CSS
+- react-pdf for document viewing
+- Real-time chat interface
 
-## 🧱 Tech Stack
+**Backend**
+- FastAPI Python server
+- Amazon Bedrock (Nova Lite, Claude 3.5 Sonnet, Claude Haiku)
+- Amazon S3 for document storage
+- In-memory vector search with embeddings
+- PyPDF2 for text extraction
 
-### 🖥️ Frontend
-- React
-- react-pdf (PDF rendering)
-- Tailwind CSS 
+**Deployment**
+- AWS Elastic Beanstalk
+- S3 static hosting for frontend
 
-### ☁️ Backend (AWS)
-- Amazon S3 – file storage
-- AWS Lambda – LLM orchestration
-- Amazon Bedrock – Claude 3 Haiku for extraction & verification
-- DynamoDB – (optional) store extracted results
-- API Gateway – REST API interface
+## Architecture
+
+The system uses a hybrid AI approach - Nova Lite for cost-effective processing with Claude 3.5 Sonnet fallback for complex legal documents. All document data is stored with session isolation for multi-tenancy.
