@@ -2,36 +2,34 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { documentAPI, chatAPI } from '../services/api';
 
 const InvoiceProcessor = ({ files, isProcessing, onProcessed, onProcessingComplete, onSessionCreated }) => {
-  const [processingStatus, setProcessingStatus] = useState([]);
+  const [processingStatus, setProcessingStatus] = useState({});
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const processInvoices = useCallback(async () => {
-    if (!files || files.length === 0) return;
+    console.log('🚀 Starting invoice processing...');
+    setProcessingStatus(prev => {
+      const updated = { ...prev };
+      files.forEach(file => {
+        updated[file.id] = 'processing';
+      });
+      return updated;
+    });
 
-    console.log('🚀 Starting to process invoices...');
-    setProcessingStatus(files.map(f => ({ id: f.id, status: 'pending', error: null })));
-    
     const processedResults = [];
+    let sessionId = null;
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      setCurrentIndex(i);
-      
+    for (const file of files) {
       try {
-        console.log(`📄 Processing file ${i + 1}/${files.length}: ${file.name}`);
+        console.log(`📄 Processing: ${file.name}`);
         
-        // Update status to processing
-        setProcessingStatus(prev => 
-          prev.map(s => s.id === file.id ? { ...s, status: 'processing' } : s)
-        );
-
         // Convert file to base64
         const fileContent = await fileToBase64(file.file);
         
         const requestData = {
           file_data: fileContent,
           file_name: file.name,
-          document_type: 'invoice'
+          document_type: 'invoice',
+          session_id: sessionId  // Use existing session or let backend create one
         };
 
         // Process the document
@@ -40,6 +38,14 @@ const InvoiceProcessor = ({ files, isProcessing, onProcessed, onProcessingComple
         if (result.success) {
           console.log(`✅ Successfully processed: ${file.name}`);
           console.log('Result structure:', result);
+          
+          // Get session ID from first successful result
+          if (!sessionId && result.session_id) {
+            sessionId = result.session_id;
+            console.log(`🎯 Session ID obtained: ${sessionId}`);
+            // Notify parent component about session creation
+            onSessionCreated && onSessionCreated(sessionId);
+          }
           
           // Map the structured_data to data for UI compatibility
           const resultWithStatus = {
@@ -52,61 +58,52 @@ const InvoiceProcessor = ({ files, isProcessing, onProcessed, onProcessingComple
             rawText: result.raw_text || '',  // Add raw text for preview
             validation: result.validation || null,  // Add validation data
             extraction_metadata: result.extraction_metadata || {},  // Add metadata for page count
-            fileData: fileContent,  // Store original file data for PDF preview
-            fileType: file.file.type  // Store file type
+            fileBase64: result.file_data || fileContent  // Use file_data from response, fallback to original
           };
           processedResults.push(resultWithStatus);
           
           // Update status to completed
-          setProcessingStatus(prev => 
-            prev.map(s => s.id === file.id ? { ...s, status: 'completed' } : s)
-          );
+          setProcessingStatus(prev => ({
+            ...prev,
+            [file.id]: 'completed'
+          }));
+          
         } else {
-          throw new Error(result.error || 'Processing failed');
+          console.error(`❌ Failed to process: ${file.name}`, result.error);
+          
+          processedResults.push({
+            id: file.id,
+            document_name: file.name,
+            status: 'error',
+            error: result.error || 'Processing failed',
+            data: {}
+          });
+          
+          setProcessingStatus(prev => ({
+            ...prev,
+            [file.id]: 'error'
+          }));
         }
-        
       } catch (error) {
-        console.error(`❌ Error processing ${file.name}:`, error);
-        console.error('Error details:', {
-          message: error.message,
-          stack: error.stack,
-          response: error.response
+        console.error(`💥 Exception processing ${file.name}:`, error);
+        
+        processedResults.push({
+          id: file.id,
+          document_name: file.name,
+          status: 'error',
+          error: error.message || 'Processing failed',
+          data: {}
         });
         
-        // Get a meaningful error message
-        let errorMessage = 'Processing failed';
-        if (error.response?.data?.detail) {
-          errorMessage = error.response.data.detail;
-        } else if (error.message) {
-          errorMessage = error.message;
-        } else if (error.response?.data?.error) {
-          errorMessage = error.response.data.error;
-        }
-        
-        // Update status to error
-        setProcessingStatus(prev => 
-          prev.map(s => s.id === file.id ? { ...s, status: 'error', error: errorMessage } : s)
-        );
+        setProcessingStatus(prev => ({
+          ...prev,
+          [file.id]: 'error'
+        }));
       }
     }
 
     // Update processed invoices
     onProcessed(processedResults);
-    
-    // Create chat session if we have any successful results
-    if (processedResults.length > 0) {
-      try {
-        console.log('🎯 Creating chat session with processed invoices...');
-        const sessionResponse = await chatAPI.createSession(processedResults);
-        
-        if (sessionResponse.success) {
-          console.log(`✅ Chat session created: ${sessionResponse.session_id}`);
-          onSessionCreated && onSessionCreated(sessionResponse.session_id);
-        }
-      } catch (error) {
-        console.error('❌ Error creating chat session:', error);
-      }
-    }
     
     // Mark processing as complete
     onProcessingComplete();
@@ -150,26 +147,26 @@ const InvoiceProcessor = ({ files, isProcessing, onProcessed, onProcessingComple
       
       <div className="space-y-3">
         {files.map((file, index) => {
-          const status = processingStatus.find(s => s.id === file.id);
+          const status = processingStatus[file.id] || 'pending';
           
           return (
             <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
               <div className="flex items-center">
                 <div className="flex-shrink-0 mr-3">
-                  {status?.status === 'pending' && (
+                  {status === 'pending' && (
                     <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
                   )}
-                  {status?.status === 'processing' && (
+                  {status === 'processing' && (
                     <div className="w-4 h-4 bg-primary-500 rounded-full animate-pulse"></div>
                   )}
-                  {status?.status === 'completed' && (
+                  {status === 'completed' && (
                     <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
                       <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
                     </div>
                   )}
-                  {status?.status === 'error' && (
+                  {status === 'error' && (
                     <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
                       <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -180,14 +177,11 @@ const InvoiceProcessor = ({ files, isProcessing, onProcessed, onProcessingComple
                 
                 <div>
                   <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                  {status?.error && (
-                    <p className="text-xs text-red-600">{status.error}</p>
-                  )}
                 </div>
               </div>
               
               <div className="text-xs text-gray-500 capitalize">
-                {status?.status || 'pending'}
+                {status || 'pending'}
               </div>
             </div>
           );
