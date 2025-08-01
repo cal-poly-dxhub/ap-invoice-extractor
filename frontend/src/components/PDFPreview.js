@@ -39,7 +39,7 @@ const PDFPreview = ({ invoice, onClose }) => {
   };
 
   // Create data URL from base64
-  const pdfDataUrl = invoice.fileData ? `data:application/pdf;base64,${invoice.fileData}` : null;
+  const pdfDataUrl = invoice.fileBase64 ? `data:application/pdf;base64,${invoice.fileBase64}` : null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -87,9 +87,9 @@ const PDFPreview = ({ invoice, onClose }) => {
                   viewMode === 'pdf' 
                     ? 'bg-white text-gray-900 shadow-sm' 
                     : 'text-gray-600 hover:text-gray-900'
-                }`}
-                title="PDF Preview"
-                disabled={!invoice.fileData}
+                } ${!invoice.fileBase64 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                title={invoice.fileBase64 ? "PDF Preview" : "PDF not available - file data missing"}
+                disabled={!invoice.fileBase64}
               >
                 <Image className="h-4 w-4 inline mr-1" />
                 PDF
@@ -207,6 +207,24 @@ const PDFPreview = ({ invoice, onClose }) => {
                     className="shadow-lg"
                   />
                 </Document>
+              </div>
+            </div>
+          )}
+
+          {/* PDF Not Available Fallback */}
+          {viewMode === 'pdf' && !pdfDataUrl && (
+            <div className="w-full flex items-center justify-center p-8">
+              <div className="text-center text-gray-500">
+                <FileText className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">PDF Not Available</h3>
+                <p className="text-sm">The original PDF file data is not available for preview.</p>
+                <p className="text-sm">You can still view the extracted text and structured data.</p>
+                <button
+                  onClick={() => setViewMode('text')}
+                  className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                >
+                  View Extracted Text
+                </button>
               </div>
             </div>
           )}
