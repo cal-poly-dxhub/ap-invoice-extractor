@@ -34,3 +34,10 @@ AI-powered invoice processing application that extracts structured data from PDF
 ## Architecture
 
 The system uses a hybrid AI approach - Nova Lite for cost-effective processing with Claude 3.5 Sonnet fallback for complex legal documents. All document data is stored with session isolation for multi-tenancy.
+
+## Contributors
+- Noah Gallego
+- Harpreet Kaur
+- Carlos De Orta
+- Elizsa Montoya
+- Emanuel Gonzalez 
