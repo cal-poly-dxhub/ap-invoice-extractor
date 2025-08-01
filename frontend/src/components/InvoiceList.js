@@ -167,11 +167,11 @@ const InvoiceList = ({ invoices, sessionId = null }) => {
           <div key={invoice.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div className="p-4">
               <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 min-w-0 flex-1 mr-2">
                   {invoice.status === 'success' ? (
-                    <CheckCircle className="h-5 w-5 text-green-500" />
+                    <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
                   ) : (
-                    <AlertCircle className="h-5 w-5 text-red-500" />
+                    <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
                   )}
                   <span className="text-sm font-medium text-gray-900 truncate">
                     {invoice.document_name}
