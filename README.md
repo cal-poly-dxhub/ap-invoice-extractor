@@ -10,8 +10,8 @@
 - [Prerequisites](#prerequisites)
 - [Initial Setup](#initial-setup)
 - [Deployment](#deployment)
-- [Support](#support)
 - [Contributors](#contributors)
+- [Support](#support)
 
 # Collaboration
 
