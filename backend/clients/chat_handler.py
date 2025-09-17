@@ -1,48 +1,38 @@
 import json
 from typing import Dict, List, Any, Optional
-from .opensearch_client import OpenSearchClient
+from .opensearch_client import get_opensearch_client
 from .claude_client import ClaudeClient
 
 class ChatHandler:
     def __init__(self):
-        self.opensearch_client = OpenSearchClient()
+        self.opensearch_client = get_opensearch_client()
         self.claude_client = ClaudeClient()
     
     def handle_chat(self, message: str, session_id: str) -> Dict[str, Any]:
         """Handle a chat message using OpenSearch semantic search."""
         try:
-            print(f"DEBUG: Searching for '{message}' in session '{session_id}'")
-            print(f"DEBUG: Total documents in store: {len(self.opensearch_client.documents)}")
+            # Get ALL documents in the session
+            session_documents = self.opensearch_client.get_session_documents(session_id)
             
-            # Perform semantic search
-            search_result = self.opensearch_client.semantic_search(message, session_id, limit=3)
-            
-            if not search_result['success']:
-                return {
-                    'success': False,
-                    'error': search_result['error'],
-                    'session_id': session_id
-                }
-            
-            # Check if we found relevant documents
-            if not search_result['results']:
+            # Check if we found any documents
+            if not session_documents:
                 return {
                     'success': True,
                     'response': "I don't have any documents uploaded yet. Please upload some invoices first and I'll be happy to help analyze them!",
                     'session_id': session_id
                 }
             
-            # Build concise context from search results
+            # Build concise context from ALL session documents
             context_parts = []
-            for result in search_result['results']:
-                if result['structured_data']:
-                    vendor = result['structured_data'].get('vendor_name', 'Unknown vendor')
-                    amount = result['structured_data'].get('total_amount', 'Unknown amount')
-                    invoice_num = result['structured_data'].get('invoice_number', '')
-                    date = result['structured_data'].get('date', '')
-                    line_items = result['structured_data'].get('line_items', [])
+            for i, doc in enumerate(session_documents):
+                if doc['structured_data']:
+                    vendor = doc['structured_data'].get('vendor_name', 'Unknown vendor')
+                    amount = doc['structured_data'].get('total_amount', 'Unknown amount')
+                    invoice_num = doc['structured_data'].get('invoice_number', '')
+                    date = doc['structured_data'].get('date', '')
+                    line_items = doc['structured_data'].get('line_items', [])
                     
-                    doc_info = f"Document: {result['filename']} - Vendor: {vendor}, Amount: ${amount}"
+                    doc_info = f"Document: {doc['filename']} - Vendor: {vendor}, Amount: ${amount}"
                     if invoice_num:
                         doc_info += f", Invoice: {invoice_num}"
                     if date:
@@ -77,7 +67,7 @@ class ChatHandler:
 User question: {message}
 
 Provide a natural, conversational response. If asked about "who charged the most" or similar, just say the vendor name and amount directly."""
-
+            
             # Use Claude for natural conversation
             claude_response = self.claude_client.chat_with_streaming(conversation_prompt)
             
@@ -85,7 +75,7 @@ Provide a natural, conversational response. If asked about "who charged the most
                 return {
                     'success': True,
                     'response': claude_response['response'],
-                    'sources': [{'filename': r['filename'], 'similarity': r['similarity_score']} for r in search_result['results']],
+                    'sources': [{'filename': doc['filename']} for doc in session_documents],
                     'session_id': session_id
                 }
             else:
@@ -95,9 +85,9 @@ Provide a natural, conversational response. If asked about "who charged the most
                     highest_amount = 0
                     highest_vendor = "Unknown"
                     
-                    for result in search_result['results']:
-                        amount = result['structured_data'].get('total_amount', 0)
-                        vendor = result['structured_data'].get('vendor_name', 'Unknown')
+                    for doc in session_documents:
+                        amount = doc['structured_data'].get('total_amount', 0)
+                        vendor = doc['structured_data'].get('vendor_name', 'Unknown')
                         if isinstance(amount, (int, float)) and amount > highest_amount:
                             highest_amount = amount
                             highest_vendor = vendor
@@ -110,15 +100,15 @@ Provide a natural, conversational response. If asked about "who charged the most
                     return {
                         'success': True,
                         'response': response,
-                        'sources': [{'filename': r['filename'], 'similarity': r['similarity_score']} for r in search_result['results']],
+                        'sources': [{'filename': doc['filename']} for doc in session_documents],
                         'session_id': session_id
                     }
                 
                 # Generic response with basic info
-                if search_result['results']:
-                    result = search_result['results'][0]
-                    vendor = result['structured_data'].get('vendor_name', 'Unknown vendor')
-                    amount = result['structured_data'].get('total_amount', 'Unknown amount')
+                if session_documents:
+                    doc = session_documents[0]
+                    vendor = doc['structured_data'].get('vendor_name', 'Unknown vendor')
+                    amount = doc['structured_data'].get('total_amount', 'Unknown amount')
                     response = f"I found an invoice from {vendor} for ${amount}."
                 else:
                     response = "I found some documents but couldn't extract the specific information you're looking for."
@@ -126,7 +116,7 @@ Provide a natural, conversational response. If asked about "who charged the most
                 return {
                     'success': True,
                     'response': response,
-                    'sources': [{'filename': r['filename'], 'similarity': r['similarity_score']} for r in search_result['results']],
+                    'sources': [{'filename': doc['filename']} for doc in session_documents],
                     'session_id': session_id
                 }
             
@@ -171,4 +161,4 @@ Provide a natural, conversational response. If asked about "who charged the most
                 'success': False,
                 'error': f"Aggregation query failed: {str(e)}",
                 'session_id': session_id
-            } 
+            }

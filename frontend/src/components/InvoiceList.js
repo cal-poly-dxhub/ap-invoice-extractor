@@ -220,10 +220,7 @@ const InvoiceList = ({ invoices, sessionId = null }) => {
                     <span className="text-gray-500">Date:</span>
                     <span className="ml-2">{invoice.data?.date || 'N/A'}</span>
                   </div>
-                  <div>
-                    <span className="text-gray-500">Confidence:</span>
-                    <span className="ml-2">{invoice.confidence}%</span>
-                  </div>
+
                 </div>
               ) : (
                 <div className="text-sm text-red-600">

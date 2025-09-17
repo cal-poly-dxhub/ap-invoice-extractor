@@ -52,7 +52,7 @@ const InvoiceProcessor = ({ files, isProcessing, onProcessed, onProcessingComple
             ...result,
             status: 'success',
             data: result.structured_data || {},  // Map structured_data to data
-            confidence: Math.round((result.extraction_confidence || 0) * 100),  // Convert to percentage
+
             id: file.id,
             document_name: result.document_name || file.name,
             rawText: result.raw_text || '',  // Add raw text for preview

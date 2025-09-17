@@ -8,12 +8,12 @@ from typing import Dict, Any
 # Import clients
 from backend.clients.local_text_extractor import LocalTextExtractor
 from backend.clients.claude_client import ClaudeClient
-from backend.clients.opensearch_client import OpenSearchClient
+from backend.clients.opensearch_client import get_opensearch_client
 
 # Initialize clients
 text_extractor = LocalTextExtractor()
 claude_client = ClaudeClient()
-opensearch_client = OpenSearchClient()
+opensearch_client = get_opensearch_client()
 
 def lambda_handler(event, context):
     """
@@ -93,10 +93,8 @@ def lambda_handler(event, context):
                 print(f"Claude formatting failed: {structured_result['error']}")
                 # Continue without structured data
                 structured_data = {}
-                extraction_confidence = 0.5
             else:
                 structured_data = structured_result
-                extraction_confidence = structured_result.get('confidence', 0.8)
             
             print("Claude formatting completed")
             
@@ -133,7 +131,7 @@ def lambda_handler(event, context):
             'session_id': session_id,
             'structured_data': structured_data,
             'raw_text': raw_text,
-            'extraction_confidence': extraction_confidence,
+
             'extraction_metadata': extraction_result.get('extraction_metadata', {}),
             's3_location': storage_result['s3_location'],
             'document_id': storage_result['document_id'],

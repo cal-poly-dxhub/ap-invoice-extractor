@@ -1,147 +1,168 @@
 # INVOICEABLE
 ## AI-Powered Invoice Processing System
 
-**INVOICEABLE** is an intelligent invoice processing application that transforms manual invoice handling into an automated, AI-driven workflow. Built for the California State University system, this tool extracts structured data from PDF invoices using advanced AI models and provides real-time analysis capabilities.
+## Table of Contents
 
-## 🎯 Project Overview
+- [Collaboration](#collaboration)
+- [Disclaimers](#disclaimers)
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Prerequisites](#prerequisites)
+- [Initial Setup](#initial-setup)
+- [Deployment](#deployment)
+- [Support](#support)
+- [Contributors](#contributors)
 
-Traditional invoice processing is time-consuming, error-prone, and requires significant manual effort. AP clerks spend an average of 12 minutes per invoice on data entry tasks. INVOICEABLE revolutionizes this process by automating data extraction, validation, and analysis - reducing processing time by 99% while improving accuracy.
+# Collaboration
 
-## ✨ Key Features
+Thanks for your interest in our solution. Having specific examples of replication and usage allows us to continue to grow and scale our work. If you clone or use this repository, kindly shoot us a quick email to let us know you are interested in this work!
 
-### 🤖 **Intelligent Document Processing**
+<wwps-cic@amazon.com>
+
+# Disclaimers
+
+**Customers are responsible for making their own independent assessment of the information in this document.**
+
+**This document:**
+
+(a) is for informational purposes only,
+
+(b) represents current AWS product offerings and practices, which are subject to change without notice, and
+
+(c) does not create any commitments or assurances from AWS and its affiliates, suppliers or licensors. AWS products or services are provided "as is" without warranties, representations, or conditions of any kind, whether express or implied. The responsibilities and liabilities of AWS to its customers are controlled by AWS agreements, and this document is not part of, nor does it modify, any agreement between AWS and its customers.
+
+(d) is not to be considered a recommendation or viewpoint of AWS
+
+**Additionally, all prototype code and associated assets should be considered:**
+
+(a) as-is and without warranties
+
+(b) not suitable for production environments
+
+(c) to include shortcuts in order to support rapid prototyping such as, but not limited to, relaxed authentication and authorization and a lack of strict adherence to security best practices
+
+**All work produced is open source. More information can be found in the GitHub repo.**
+
+## Overview
+
+**INVOICEABLE** is an AI-powered invoice processing application that automates manual invoice handling. Developed during the DxHub AI CSU Summer Camp, it extracts raw data from PDF invoices using a Python library, then leverages an AI model to structure the data and generate GL-ready Excel or CSV files for export. The application also includes a chatbot that allows users to ask questions about the invoices uploaded in the current session.
+
+### Key Features
+
 - **Multi-format Support**: Process PDF, TXT, JSON, CSV, and MD files
-- **AI-Powered Extraction**: Uses Amazon Nova Lite and Claude 3.5 Sonnet for optimal cost and accuracy
-- **Smart Fallback System**: Automated fallback to ensure no document fails processing
-- **Multi-page Support**: Handle complex legal documents and invoices
-
-### 🧠 **Advanced AI Capabilities**
-- **Hybrid AI Architecture**: Nova Lite for cost-effective processing, Claude 3.5 Sonnet for complex documents
+- **AI-Powered Extraction**: Uses Amazon Nova Lite / Claude 3.5 Sonnet for optimal cost and accuracy
 - **Real-time Chat Interface**: Natural language queries about processed invoices
-- **Semantic Search**: Vector-based document search with TF-IDF embeddings
-- **Confidence Scoring**: AI validation with reliability metrics
-
-### 💼 **Enterprise Features**
 - **Session Management**: Secure, isolated processing sessions
 - **Export Capabilities**: GL-ready Excel/CSV exports for accounting systems
-- **Audit Trails**: Complete processing history and validation records
-- **Human-in-the-Loop**: Edit and correction capabilities for edge cases
-
-### 🔍 **Interactive Analysis**
-- **PDF Preview**: Multiple view modes (text, split, full PDF)
-- **Chat with Documents**: Ask questions like "Which vendor charged the most?"
-- **Data Validation**: AI-powered accuracy verification
+- **Interactive PDF Preview**: Multiple view modes with zoom and navigation
 - **Batch Processing**: Handle multiple invoices simultaneously
 
-## 🏗️ Technical Architecture
+## Architecture
 
-### **Frontend**
-- **React** with Tailwind CSS for modern, responsive UI
-- **react-pdf** for document viewing and navigation
-- **Real-time chat interface** for document analysis
-- **Interactive PDF viewer** with zoom, rotation, and multi-view capabilities
+The solution consists of several key components:
 
-### **Backend**
-- **FastAPI** Python server with high-performance REST API
-- **Amazon Bedrock** integration (Nova Lite, Claude 3.5 Sonnet, Claude Haiku)
-- **Amazon S3** for secure document storage
-- **PyPDF2** for local text extraction
-- **Session-based architecture** with automatic cleanup
+1. **Frontend Interface**
+   - React 18 application with Tailwind CSS
+   - Interactive PDF viewer with react-pdf
+   - Real-time chat interface for document analysis
+   - Responsive design for desktop and mobile
 
-### **AI & Machine Learning**
-- **Nova Lite**: Primary extraction engine for cost efficiency
-- **Claude 3.5 Sonnet**: Fallback for complex legal documents
-- **TF-IDF Vectorization**: Document similarity and search
-- **Confidence Scoring**: Reliability metrics for each extraction
+2. **API Layer**
+   - FastAPI Python server with high-performance REST endpoints
+   - Session-based architecture with automatic cleanup
+   - CORS enabled for cross-origin requests
 
-### **Deployment**
-- **AWS Elastic Beanstalk** for scalable backend hosting
-- **S3 Static Hosting** for frontend deployment
-- **Multi-tenant architecture** ready for enterprise scale
+3. **AI Services**
+   - Amazon Bedrock with Nova Lite for primary text extraction
+   - Claude 3.5 Sonnet for complex document fallback
+   - Claude 3 Haiku for conversational chat responses
+   - Amazon Titan for vector embeddings and semantic search
 
-## 🚀 Live Demo Capabilities
+4. **Data Storage and Management**
+   - Amazon S3 for secure document storage
+   - File-based local storage for development
+   - PyPDF2 for local text extraction
+   - Pickle-based document persistence
 
-The system successfully processes various invoice types:
 
-- **Consulting Services**: Sability LP ($787.50) - 3.5 hours at $225/hour
-- **IT Services**: CCS Disaster Recovery ($3,420.00) - Annual service contract
-- **Legal Services**: Complex multi-page legal invoices ($113,000+)
-- **University Operations**: Cal Poly billing and vendor invoices
+## Prerequisites
 
-## 💡 Business Impact
+- AWS CLI configured with appropriate permissions
+- Node.js 18+ (for frontend)
+- Python 3.9+ (for backend)
+- Request model access for the required models through AWS console in Bedrock (Amazon Nova Lite, Claude 3.5 Sonnet V2, Claude 3 Haiku, Amazon Titan Text V2)
 
-### **Efficiency Gains**
-- **99% Time Reduction**: 12 minutes → 10 seconds per invoice
-- **High Accuracy**: 95%+ extraction accuracy with AI validation
-- **Cost Optimization**: 94% reduction in AI processing costs using Nova Lite
-- **Scalable Processing**: Handle hundreds of invoices simultaneously
+## Initial Setup
 
-### **Real-World Applications**
-- **Universities**: Vendor payments, student billing, research contracts
-- **Corporations**: Expense processing, vendor management, audit compliance
-- **Law Firms**: Complex time-entry billing with attorney breakdowns
-- **Government**: Procurement processing, compliance documentation
+1. **Enable Bedrock Model Access:**
+   - Navigate to the AWS Bedrock console
+   - Request access to all models from both Anthropic and Amazon
+   - Ensure you're working in the correct AWS region for your deployment
 
-## 🔬 Innovation Highlights
+2. **Configure AWS credentials**
+   ```bash
+   aws configure
+   ```
+   You'll be prompted to enter:
+   - AWS Access Key ID
+   - AWS Secret Access Key
+   - Default region name (us-west-2 recommended)
+   - Default output format
 
-### **Human-Centered AI**
-- "AI reads, humans lead" philosophy
-- Combines automation efficiency with human oversight
-- Transparent confidence scoring for trust and verification
+## Deployment
 
-### **Cost-Effective Intelligence**
-- Nova Lite integration reduces AI costs by 94%
-- Local processing for privacy and speed
-- Smart model selection based on document complexity
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/cal-poly-dxhub/ap-invoice-extractor.git
+   cd ap-invoice-extractor
+   ```
 
-### **Production-Ready Architecture**
-- Session isolation for multi-tenancy
-- Comprehensive error handling and logging
-- Automatic cleanup and resource management
-- Enterprise-grade security and compliance features
+2. **Install backend dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-## 🎓 Cal Poly Digital Transformation Hub
+3. **Install frontend dependencies**
+   ```bash
+   cd frontend
+   npm install
+   cd ..
+   ```
 
-Developed as **AP Invoicing Automation Project #22** for the Cal Poly Digital Transformation Hub, this project demonstrates:
+4. **Start the backend server**
+   ```bash
+   python api_server.py
+   ```
 
-- **Full-stack development** expertise across modern technologies
-- **AI integration** with practical business applications  
-- **Enterprise architecture** design and implementation
-- **User experience** focus with intuitive interfaces
-- **Cost optimization** through intelligent technology choices
+5. **Start the frontend (in a new terminal)**
+   ```bash
+   cd frontend
+   npm start
+   ```
 
-## 🏆 Project Achievements
+6. **Access the application**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:8000
+   - API Documentation: http://localhost:8000/docs
 
-- **Multi-industry validation** across IT, consulting, and legal services
-- **Complex document handling** including 5-page legal invoices
-- **High-value transaction processing** ($113K+ invoices)
-- **Real-time performance** with sub-2-second processing
-- **Production deployment** ready for immediate use
 
-## 🔮 Future Roadmap
+## Contributors
 
-### **Enhanced Document Intelligence**
-- Computer vision for scanned receipts and handwritten invoices
-- Multi-language support with automatic translation
-- Advanced fraud detection and anomaly identification
+This project was developed by talented students during the **DxHub AI CSU Summer Camp**:
 
-### **Enterprise Integration**
-- Direct ERP system connections (QuickBooks, SAP, Oracle)
-- Advanced approval workflows and compliance automation
-- Predictive analytics for budget management and vendor optimization
-
-## 👥 Contributors
-
-This project was developed by a talented team of engineers and designers:
-
+**Students:**
 - **Noah Gallego** 
-- **Harpreet Kaur**   
-- **Carlos De Orta** 
+- **Harpreet Kaur**
+- **Carlos De Orta**
 - **Elizsa Montoya**
 - **Emanuel Gonzalez**
 
----
+**Mentor:**
+- **Shrey Shah** - <sshah84@calpoly.edu>
 
-**INVOICEABLE** represents the future of financial document processing - where artificial intelligence handles routine tasks while humans focus on strategic decision-making. Built with cutting-edge technology and a deep understanding of business needs, it's ready to transform how organizations handle their financial operations.
+## Support
 
-*"Where automation meets human insight."*
+For any queries or issues, please contact:
+
+- Darren Kraker - <dkraker@amazon.com>
+- Shrey Shah, Jr. SDE - <sshah84@calpoly.edu>

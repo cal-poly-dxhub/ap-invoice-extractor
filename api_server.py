@@ -11,6 +11,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
+import uuid
 
 # Add backend to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'backend'))
@@ -34,6 +35,7 @@ class DocumentRequest(BaseModel):
     file_data: str
     file_name: str
     document_type: str = "invoice"
+    session_id: Optional[str] = None
 
 class S3DocumentRequest(BaseModel):
     s3_key: str
@@ -60,13 +62,16 @@ async def process_document(request: DocumentRequest):
     """Process a document using the Lambda function."""
     try:
         print(f"🔍 Processing document: {request.file_name}")
-        
+        # Use provided session_id or create new one
+        session_id = request.session_id or str(uuid.uuid4())
+        print(f"📋 Using session_id: {session_id} (provided: {request.session_id is not None})")
         # Create Lambda event format
         event = {
             "body": json.dumps({
                 "file_data": request.file_data,
                 "file_name": request.file_name,
-                "document_type": request.document_type
+                "document_type": request.document_type,
+                "session_id": session_id
             })
         }
         
@@ -74,11 +79,13 @@ async def process_document(request: DocumentRequest):
         # Call the Lambda handler
         result = lambda_handler(event, None)
         print(f"✅ Lambda result status: {result.get('statusCode', 'unknown')}")
-        
+
         # Parse the Lambda response
         if result["statusCode"] == 200:
             response_body = json.loads(result["body"])
             print("🎉 Processing successful")
+            # Add session_id to response
+            response_body['session_id'] = session_id
             return response_body
         else:
             error_body = json.loads(result["body"])
@@ -154,15 +161,15 @@ async def chat_with_invoices(request: ChatRequest):
         print(f"💬 Chat request for session {request.session_id}: {request.message}")
         
         # Get session data
-        session_data = session_manager.get_session(request.session_id)
-        if not session_data:
-            raise HTTPException(status_code=404, detail="Session not found or expired")
+        # session_data = session_manager.get_session(request.session_id)
+        # if not session_data:
+        #     raise HTTPException(status_code=404, detail="Session not found or expired")
         
         # Initialize chat handler
         chat_handler = ChatHandler()
         
         # Process the chat message
-        result = chat_handler.handle_chat(request.message, session_data)
+        result = chat_handler.handle_chat(request.message, request.session_id)
         
         if result.get("success"):
             print(f"✅ Chat response generated")

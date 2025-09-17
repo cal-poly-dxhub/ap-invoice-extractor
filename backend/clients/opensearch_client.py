@@ -1,40 +1,33 @@
 import boto3
 import json
 import time
+import os
+import pickle
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 import hashlib
 
 class OpenSearchClient:
-    _instance = None
-    _initialized = False
-    
-    def __new__(cls, region_name: str = "us-west-2"):
-        """Singleton pattern to ensure shared storage."""
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-    
     def __init__(self, region_name: str = "us-west-2"):
         """Initialize OpenSearch client for direct document storage."""
-        if self._initialized:
-            return
             
         session = boto3.Session()
         self.bedrock_runtime = session.client("bedrock-runtime", region_name=region_name)
         self.s3_client = session.client("s3", region_name=region_name)
         
         # Configuration
-        self.s3_bucket = "csu-summer-camp-invoice-extraction-2025"
+        self.s3_bucket = "csu-summer-camp-invoice-extraction-2025-2"
         self.s3_prefix = "invoices/"
         self.embedding_model = "amazon.titan-embed-text-v2:0"
         
-        # In-memory document store (replace with actual OpenSearch when available)
-        self.documents = {}
-        self.embeddings = {}
+        # File-based document store (replace with actual OpenSearch when available)
+        self.storage_dir = "/tmp/opensearch_storage"
+        os.makedirs(self.storage_dir, exist_ok=True)
+        self.documents_file = os.path.join(self.storage_dir, "documents.pkl")
+        self.embeddings_file = os.path.join(self.storage_dir, "embeddings.pkl")
         
-        self._initialized = True
-        print("🔧 OpenSearchClient singleton initialized")
+        print(f"🔧 OpenSearchClient initialized - ID: {id(self)}")
+        print(f"📁 Storage directory: {self.storage_dir}")
     
     def generate_embeddings(self, text: str) -> List[float]:
         """Generate embeddings using Amazon Titan."""
@@ -98,11 +91,17 @@ class OpenSearchClient:
             }
             
             # Step 4: Store in document store (replace with OpenSearch)
-            self.documents[doc_id] = document
-            self.embeddings[doc_id] = embeddings
+            documents = self._load_documents()
+            embeddings_dict = self._load_embeddings()
+            
+            documents[doc_id] = document
+            embeddings_dict[doc_id] = embeddings
+            
+            self._save_documents(documents)
+            self._save_embeddings(embeddings_dict)
             
             print(f"✅ Document stored: {filename} (ID: {doc_id})")
-            
+
             return {
                 'success': True,
                 'document_id': doc_id,
@@ -119,6 +118,13 @@ class OpenSearchClient:
     
     def semantic_search(self, query: str, session_id: str, limit: int = 5) -> Dict[str, Any]:
         """Perform semantic search using cosine similarity."""
+        documents = self._load_documents()
+        embeddings_dict = self._load_embeddings()
+        
+        print(f"📊 Search - Total documents: {len(documents)}")
+        print(f"📊 All document sessions: {[doc['session_id'] for doc in documents.values()]}")
+        print(f"📊 Looking for session: {session_id}")
+
         try:
             # Generate query embeddings
             query_embeddings = self.generate_embeddings(query)
@@ -126,7 +132,7 @@ class OpenSearchClient:
                 return {'success': False, 'error': 'Failed to generate query embeddings'}
             
             # Filter documents by session
-            session_docs = {doc_id: doc for doc_id, doc in self.documents.items() 
+            session_docs = {doc_id: doc for doc_id, doc in documents.items() 
                            if doc['session_id'] == session_id}
             
             if not session_docs:
@@ -139,7 +145,7 @@ class OpenSearchClient:
             # Calculate similarities
             similarities = []
             for doc_id, doc in session_docs.items():
-                doc_embeddings = self.embeddings.get(doc_id, [])
+                doc_embeddings = embeddings_dict.get(doc_id, [])
                 
                 if doc_embeddings:
                     similarity = self._cosine_similarity(query_embeddings, doc_embeddings)
@@ -177,7 +183,8 @@ class OpenSearchClient:
     
     def get_session_documents(self, session_id: str) -> List[Dict]:
         """Get all documents for a session."""
-        session_docs = [doc for doc in self.documents.values() 
+        documents = self._load_documents()
+        session_docs = [doc for doc in documents.values() 
                        if doc['session_id'] == session_id]
         return session_docs
     
@@ -251,4 +258,53 @@ class OpenSearchClient:
             return dot_product / (magnitude1 * magnitude2)
             
         except Exception:
-            return 0 
+            return 0
+    
+    def _load_documents(self) -> Dict:
+        """Load documents from file."""
+        try:
+            if os.path.exists(self.documents_file):
+                with open(self.documents_file, 'rb') as f:
+                    return pickle.load(f)
+        except Exception as e:
+            print(f"Error loading documents: {e}")
+        return {}
+    
+    def _save_documents(self, documents: Dict):
+        """Save documents to file."""
+        try:
+            with open(self.documents_file, 'wb') as f:
+                pickle.dump(documents, f)
+        except Exception as e:
+            print(f"Error saving documents: {e}")
+    
+    def _load_embeddings(self) -> Dict:
+        """Load embeddings from file."""
+        try:
+            if os.path.exists(self.embeddings_file):
+                with open(self.embeddings_file, 'rb') as f:
+                    return pickle.load(f)
+        except Exception as e:
+            print(f"Error loading embeddings: {e}")
+        return {}
+    
+    def _save_embeddings(self, embeddings: Dict):
+        """Save embeddings to file."""
+        try:
+            with open(self.embeddings_file, 'wb') as f:
+                pickle.dump(embeddings, f)
+        except Exception as e:
+            print(f"Error saving embeddings: {e}")
+
+
+# Global instance to ensure singleton across imports
+_global_client = None
+
+def get_opensearch_client():
+    global _global_client
+    if _global_client is None:
+        print("🆕 Creating NEW global OpenSearch client")
+        _global_client = OpenSearchClient()
+    else:
+        print("♻️ Reusing existing global OpenSearch client")
+    return _global_client

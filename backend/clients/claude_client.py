@@ -219,8 +219,6 @@ Be thorough in extracting time entries and attorney billing details. Return vali
                 json_text = response_text[json_start:json_end]
                 structured_data = json.loads(json_text)
                 
-                # Add confidence score
-                structured_data['confidence'] = 0.9
                 return structured_data
             else:
                 return {"error": "No valid JSON found in response"}
@@ -244,7 +242,7 @@ Be thorough in extracting time entries and attorney billing details. Return vali
         """Simple fallback extraction if Nova Lite fails."""
         import re
         
-        extracted = {"confidence": 0.3}
+        extracted = {}
         
         # Simple regex patterns
         amount_match = re.search(r'\$[\d,]+\.?\d*', raw_text)
