@@ -10,8 +10,8 @@
 - [Prerequisites](#prerequisites)
 - [Initial Setup](#initial-setup)
 - [Deployment](#deployment)
-- [Support](#support)
 - [Contributors](#contributors)
+- [Support](#support)
 
 # Collaboration
 
@@ -158,7 +158,7 @@ This project was developed by talented students during the **DxHub AI CSU Summer
 - **Emanuel Gonzalez**
 
 **Mentor:**
-- **Shrey Shah** - <sshah84@calpoly.edu>
+- **Shrey Shah**
 
 ## Support
 
