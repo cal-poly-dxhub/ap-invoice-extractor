@@ -129,7 +129,7 @@ class InvoiceProcessorStack(Stack):
             source_arn=f"{api.arn_for_execute_api()}/*/*"
         )
         
-        # Lambda integration (simple like Orcutt chatbot)
+        # Lambda integration
         lambda_integration = apigateway.LambdaIntegration(invoice_lambda)
         
         # API Gateway resources and methods
