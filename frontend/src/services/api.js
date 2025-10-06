@@ -41,32 +41,20 @@ export const documentAPI = {
     return response.data;
   },
 
-  // Process document from S3
-  processS3Document: async (s3Key, bucketName = null) => {
-    const response = await api.post('/process-s3-document', {
-      s3_key: s3Key,
-      bucket_name: bucketName,
-      document_type: 'invoice'
+  // Update document structured data
+  updateDocument: async (documentId, sessionId, structuredData) => {
+    const response = await api.post('/update-document', {
+      document_id: documentId,
+      session_id: sessionId,
+      structured_data: structuredData
     });
-    return response.data;
-  },
-
-  // Health check
-  healthCheck: async () => {
-    const response = await api.get('/health');
     return response.data;
   }
 };
 
 // Chat API
 export const chatAPI = {
-  // Create a new chat session with invoice data
-  createSession: async (invoices) => {
-    const response = await api.post('/create-session', {
-      invoices: invoices
-    });
-    return response.data;
-  },
+  // Note: Session creation is now handled automatically during document processing
 
   // Send a chat message
   sendMessage: async (sessionId, message) => {
@@ -77,23 +65,15 @@ export const chatAPI = {
     return response.data;
   },
 
-  // Get session status
-  getSessionStatus: async (sessionId) => {
-    const response = await api.get(`/session/${sessionId}/status`);
-    return response.data;
-  },
+
 
   // Delete a session
   deleteSession: async (sessionId) => {
-    const response = await api.delete(`/session/${sessionId}`);
+    const response = await api.delete(`/session/${sessionId}/delete`);
     return response.data;
   },
 
-  // Get session statistics
-  getSessionStats: async () => {
-    const response = await api.get('/sessions/stats');
-    return response.data;
-  }
+
 };
 
 export default api; 

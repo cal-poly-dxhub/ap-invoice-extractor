@@ -6,7 +6,6 @@ const InvoiceProcessor = ({ files, isProcessing, onProcessed, onProcessingComple
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const processInvoices = useCallback(async () => {
-    console.log('🚀 Starting invoice processing...');
     setProcessingStatus(prev => {
       const updated = { ...prev };
       files.forEach(file => {
@@ -16,12 +15,14 @@ const InvoiceProcessor = ({ files, isProcessing, onProcessed, onProcessingComple
     });
 
     const processedResults = [];
-    let sessionId = null;
+    // Generate session ID upfront so all files use the same session
+    let sessionId = Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+    
+    // Notify parent component about session creation immediately
+    onSessionCreated && onSessionCreated(sessionId);
 
     for (const file of files) {
       try {
-        console.log(`📄 Processing: ${file.name}`);
-        
         // Convert file to base64
         const fileContent = await fileToBase64(file.file);
         
@@ -29,31 +30,20 @@ const InvoiceProcessor = ({ files, isProcessing, onProcessed, onProcessingComple
           file_data: fileContent,
           file_name: file.name,
           document_type: 'invoice',
-          session_id: sessionId  // Use existing session or let backend create one
+          session_id: sessionId  // All files use the same session ID
         };
 
         // Process the document
         const result = await documentAPI.processDocument(requestData);
         
         if (result.success) {
-          console.log(`✅ Successfully processed: ${file.name}`);
-          console.log('Result structure:', result);
-          
-          // Get session ID from first successful result
-          if (!sessionId && result.session_id) {
-            sessionId = result.session_id;
-            console.log(`🎯 Session ID obtained: ${sessionId}`);
-            // Notify parent component about session creation
-            onSessionCreated && onSessionCreated(sessionId);
-          }
           
           // Map the structured_data to data for UI compatibility
           const resultWithStatus = {
             ...result,
             status: 'success',
             data: result.structured_data || {},  // Map structured_data to data
-
-            id: file.id,
+            id: result.document_id || file.id,  // Use document_id from backend, fallback to file.id
             document_name: result.document_name || file.name,
             rawText: result.raw_text || '',  // Add raw text for preview
             validation: result.validation || null,  // Add validation data
@@ -69,10 +59,9 @@ const InvoiceProcessor = ({ files, isProcessing, onProcessed, onProcessingComple
           }));
           
         } else {
-          console.error(`❌ Failed to process: ${file.name}`, result.error);
           
           processedResults.push({
-            id: file.id,
+            id: file.id,  // Keep file.id for error cases since no document_id from backend
             document_name: file.name,
             status: 'error',
             error: result.error || 'Processing failed',
@@ -85,10 +74,9 @@ const InvoiceProcessor = ({ files, isProcessing, onProcessed, onProcessingComple
           }));
         }
       } catch (error) {
-        console.error(`💥 Exception processing ${file.name}:`, error);
         
         processedResults.push({
-          id: file.id,
+          id: file.id,  // Keep file.id for error cases since no document_id from backend
           document_name: file.name,
           status: 'error',
           error: error.message || 'Processing failed',
@@ -107,7 +95,6 @@ const InvoiceProcessor = ({ files, isProcessing, onProcessed, onProcessingComple
     
     // Mark processing as complete
     onProcessingComplete();
-    console.log('🏁 Processing complete!');
     
   }, [files, onProcessed, onProcessingComplete, onSessionCreated]);
 
@@ -116,7 +103,7 @@ const InvoiceProcessor = ({ files, isProcessing, onProcessed, onProcessingComple
     if (isProcessing && files.length > 0) {
       processInvoices();
     }
-  }, [isProcessing, files, processInvoices]);
+  }, [isProcessing, files.length]); // Remove processInvoices from dependencies
 
   // Helper function to convert file to base64
   const fileToBase64 = (file) => {

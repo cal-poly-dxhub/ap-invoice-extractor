@@ -135,7 +135,7 @@ def lambda_handler(event, context):
             'extraction_metadata': extraction_result.get('extraction_metadata', {}),
             's3_location': storage_result['s3_location'],
             'document_id': storage_result['document_id'],
-            'embedding_dimensions': storage_result['embedding_dimensions'],
+
             'search_ready': True,
             'processing_time': 'immediate',
             'file_data': file_data  # Add original base64 file data for PDF preview

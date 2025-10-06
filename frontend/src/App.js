@@ -103,6 +103,7 @@ function App() {
             <InvoiceList 
               invoices={processedInvoices}
               sessionId={chatSessionId}
+              onInvoiceUpdate={setProcessedInvoices}
             />
           </div>
         )}

@@ -3,12 +3,13 @@ import {
   Eye, Edit2, Download, ChevronLeft, ChevronRight, 
   CheckCircle, AlertCircle, Search, Filter 
 } from 'lucide-react';
+import { documentAPI } from '../services/api';
 import InvoiceEditor from './InvoiceEditor';
 import PDFPreview from './PDFPreview';
 import ChatInterface from './ChatInterface';
 import * as XLSX from 'xlsx';
 
-const InvoiceList = ({ invoices, sessionId = null }) => {
+const InvoiceList = ({ invoices, sessionId = null, onInvoiceUpdate }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -275,14 +276,30 @@ const InvoiceList = ({ invoices, sessionId = null }) => {
       {editingInvoice && (
         <InvoiceEditor
           invoice={editingInvoice}
-          onSave={(updatedData) => {
-            // Update the invoice data
-            const updatedInvoices = invoices.map(inv => 
-              inv.id === editingInvoice.id 
-                ? { ...inv, data: updatedData }
-                : inv
-            );
-            setEditingInvoice(null);
+          onSave={async (updatedData) => {
+            try {
+              // Call API to update document
+              await documentAPI.updateDocument(
+                editingInvoice.id,
+                sessionId,
+                updatedData
+              );
+              
+              // Update parent component state
+              if (onInvoiceUpdate) {
+                const updatedInvoices = invoices.map(inv => 
+                  inv.id === editingInvoice.id 
+                    ? { ...inv, data: updatedData }
+                    : inv
+                );
+                onInvoiceUpdate(updatedInvoices);
+              }
+              
+              setEditingInvoice(null);
+            } catch (error) {
+              console.error('Failed to update invoice:', error);
+              alert('Failed to save changes. Please try again.');
+            }
           }}
           onClose={() => setEditingInvoice(null)}
         />
