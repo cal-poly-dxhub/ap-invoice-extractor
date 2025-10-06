@@ -65,7 +65,7 @@ const FileUpload = ({ onFilesAdded, files, onRemoveFile }) => {
               Drag and drop files here, or click to browse
             </p>
             <p className="text-sm text-gray-400 mt-2">
-              Supports PDF, TXT, JSON, CSV, MD, SMS files
+              Supports PDF, TXT, JSON, CSV, MD files
             </p>
           </div>
         </div>
