@@ -1,0 +1,43 @@
+aws:
+  region: us-west-2
+  account: null  # Will be set from CDK_DEFAULT_ACCOUNT
+
+stack:
+  name: InvoiceProcessorStack
+
+s3:
+  invoice_bucket: invoice-processor-documents
+  frontend_bucket: invoice-processor-frontend
+
+bedrock:
+  nova_lite_model: us.amazon.nova-lite-v1:0
+  claude_sonnet_model: anthropic.claude-3-5-sonnet-20241022-v2:0
+  claude_haiku_model: anthropic.claude-3-haiku-20240307-v1:0
+
+lambda:
+  timeout: 300
+  memory: 1024
+  runtime: python3.9
+
+api:
+  name: InvoiceProcessorAPI
+  cors:
+    allow_origins: ['*']
+    allow_methods: ['OPTIONS', 'POST', 'GET', 'DELETE']
+    allow_headers: ['Content-Type', 'X-Amz-Date', 'Authorization', 'X-Api-Key', 'X-Amz-Security-Token']
+
+cloudfront:
+  default_root_object: index.html
+  error_responses:
+    - http_status: 404
+      response_http_status: 200
+      response_page_path: /index.html
+
+environments:
+  dev:
+    s3_suffix: dev
+    cors_origins: ['*']
+  
+  prod:
+    s3_suffix: prod
+    cors_origins: ['*']
