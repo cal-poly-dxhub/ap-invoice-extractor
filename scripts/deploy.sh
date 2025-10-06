@@ -19,6 +19,7 @@ source venv/bin/activate
 # Install CDK dependencies
 echo "Installing CDK dependencies..."
 pip install -r requirements.txt
+npm install aws-cdk
 
 # Build frontend
 echo "Building frontend..."
