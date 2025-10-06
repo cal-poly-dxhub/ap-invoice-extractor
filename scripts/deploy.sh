@@ -10,6 +10,12 @@ echo "Starting Invoice Processor deployment..."
 ENVIRONMENT=${ENVIRONMENT:-dev}
 echo "Deploying to environment: $ENVIRONMENT"
 
+# Create and activate virtual environment
+echo "Creating virtual environment..."
+python3 -m venv venv
+echo "Activating virtual environment..."
+source venv/bin/activate
+
 # Install CDK dependencies
 echo "Installing CDK dependencies..."
 pip install -r requirements.txt
@@ -32,10 +38,7 @@ echo "API Gateway URL: $API_URL"
 
 # Update frontend configuration
 echo "Updating frontend API configuration..."
-cat > "../invoiceable/frontend/.env" << EOF
-REACT_APP_API_URL=$API_URL
-REACT_APP_ENVIRONMENT=production
-EOF
+./scripts/update-frontend-config.sh "$API_URL"
 
 # Rebuild frontend with new API URL
 echo "Rebuilding frontend with API URL..."

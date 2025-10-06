@@ -11,7 +11,7 @@ if [ -z "$1" ]; then
 fi
 
 API_URL=$1
-FRONTEND_DIR="../invoiceable/frontend"
+FRONTEND_DIR="frontend"
 
 echo "Updating frontend configuration..."
 echo "API URL: $API_URL"

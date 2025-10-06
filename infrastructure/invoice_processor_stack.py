@@ -196,7 +196,7 @@ class InvoiceProcessorStack(Stack):
         # Deploy React build to S3
         s3deploy.BucketDeployment(
             self, "DeployFrontend",
-            sources=[s3deploy.Source.asset("../invoiceable/frontend/build")],
+            sources=[s3deploy.Source.asset("frontend/build")],
             destination_bucket=frontend_bucket,
             distribution=distribution,
             distribution_paths=["/*"],

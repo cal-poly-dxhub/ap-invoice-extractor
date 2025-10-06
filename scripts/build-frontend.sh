@@ -7,7 +7,19 @@ set -e
 echo "Building React frontend for CDK deployment..."
 
 # Navigate to frontend directory
-cd ../invoiceable/frontend
+cd frontend
+
+# Check if package.json exists
+if [ ! -f "package.json" ]; then
+    echo "No package.json found. Checking for existing build..."
+    if [ -d "build" ]; then
+        echo "Using existing build directory"
+        exit 0
+    else
+        echo "Error: No package.json and no build directory found"
+        exit 1
+    fi
+fi
 
 # Install dependencies if needed
 if [ ! -d "node_modules" ]; then
@@ -20,4 +32,4 @@ echo "Building React app..."
 npm run build
 
 echo "Frontend build completed successfully!"
-echo "Build output is in: ../invoiceable/frontend/build"
+echo "Build output is in: frontend/build"
