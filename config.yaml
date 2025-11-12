@@ -11,8 +11,8 @@ s3:
 
 bedrock:
   nova_lite_model: us.amazon.nova-lite-v1:0
-  claude_sonnet_model: anthropic.claude-3-5-sonnet-20241022-v2:0
-  claude_haiku_model: anthropic.claude-3-haiku-20240307-v1:0
+  claude_sonnet_model: us.amazon.nova-lite-v1:0
+  claude_haiku_model: us.amazon.nova-lite-v1:0
 
 lambda:
   timeout: 300
