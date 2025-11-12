@@ -372,19 +372,29 @@ def call_claude_sonnet(raw_text):
 {raw_text}
 
 Return valid JSON with vendor_name, invoice_number, total_amount, date, payment_terms, and line_items."""
-
         response = bedrock_client.invoke_model(
             modelId=CLAUDE_SONNET_MODEL,
             body=json.dumps({
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": 2000,
-                "temperature": 0.1,
-                "messages": [{"role": "user", "content": prompt}]
+                "messages": [{"role": "user", "content": [{"text": prompt}]}],
+                "inferenceConfig": {"maxTokens": 2000, "temperature": 0.1}
             })
         )
+
+        # response = bedrock_client.invoke_model(
+        #     modelId=CLAUDE_SONNET_MODEL,
+        #     body=json.dumps({
+        #         "anthropic_version": "bedrock-2023-05-31",
+        #         "max_tokens": 2000,
+        #         "temperature": 0.1,
+        #         "messages": [{"role": "user", "content": prompt}]
+        #     })
+        # )
         
+        # result = json.loads(response['body'].read())
+        # response_text = result['content'][0]['text']
+
         result = json.loads(response['body'].read())
-        response_text = result['content'][0]['text']
+        response_text = result['output']['message']['content'][0]['text']
         
         # Parse JSON from response
         json_start = response_text.find('{')
@@ -408,18 +418,28 @@ User question: {message}
 
 Provide a clear, conversational answer."""
 
+        # response = bedrock_client.invoke_model(
+        #     modelId=CLAUDE_HAIKU_MODEL,
+        #     body=json.dumps({
+        #         "anthropic_version": "bedrock-2023-05-31",
+        #         "max_tokens": 500,
+        #         "temperature": 0.7,
+        #         "messages": [{"role": "user", "content": prompt}]
+        #     })
+        # )
         response = bedrock_client.invoke_model(
             modelId=CLAUDE_HAIKU_MODEL,
             body=json.dumps({
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": 500,
-                "temperature": 0.7,
-                "messages": [{"role": "user", "content": prompt}]
+                "messages": [{"role": "user", "content": [{"text": prompt}]}],
+                "inferenceConfig": {"maxTokens": 500, "temperature": 0.7}
             })
         )
         
+        # result = json.loads(response['body'].read())
+        # return result['content'][0]['text']
+
         result = json.loads(response['body'].read())
-        return result['content'][0]['text']
+        return result['output']['message']['content'][0]['text']
         
     except Exception as e:
         return f"Sorry, I couldn't process your question: {str(e)}"
