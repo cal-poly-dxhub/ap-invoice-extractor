@@ -66,11 +66,7 @@ class InvoiceProcessorStack(Stack):
                             actions=[
                                 "bedrock:InvokeModel"
                             ],
-                            resources=[
-                                f"arn:aws:bedrock:{self.region}::foundation-model/{self.config.NOVA_LITE_MODEL}",
-                                f"arn:aws:bedrock:{self.region}::foundation-model/{self.config.CLAUDE_SONNET_MODEL}",
-                                f"arn:aws:bedrock:{self.region}::foundation-model/{self.config.CLAUDE_HAIKU_MODEL}"
-                            ]
+                            resources="*"
                         )
                     ]
                 )
