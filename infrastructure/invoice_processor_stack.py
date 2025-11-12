@@ -66,7 +66,7 @@ class InvoiceProcessorStack(Stack):
                             actions=[
                                 "bedrock:InvokeModel"
                             ],
-                            resources="*"
+                            resources=["*"]
                         )
                     ]
                 )
