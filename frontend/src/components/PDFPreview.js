@@ -51,7 +51,7 @@ const PDFPreview = ({ invoice, onClose }) => {
               {invoice.document_name || invoice.fileName}
             </h2>
             <p className="text-sm text-gray-500">
-              Extracted with {invoice.confidence}% confidence • {invoice.extraction_metadata?.total_pages || numPages || 1} page(s)
+              {invoice.extraction_metadata?.total_pages || numPages || 1} page(s)
             </p>
           </div>
           
@@ -258,6 +258,18 @@ const PDFPreview = ({ invoice, onClose }) => {
                           ${invoice.data.total_amount?.toFixed(2) || '0.00'}
                         </span>
                       </div>
+                      {invoice.extraction_method && (
+                        <div className="flex justify-between pt-2 border-t border-blue-200">
+                          <span className="text-blue-700">Extracted using:</span>
+                          <span className={`font-medium px-2 py-0.5 rounded text-xs ${
+                            invoice.extraction_method === 'PyPDF2' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {invoice.extraction_method}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 

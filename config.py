@@ -86,9 +86,9 @@ class Config:
         return f"{self.STACK_NAME}-{env}" if env != "prod" else self.STACK_NAME
     
     def get_s3_bucket_name(self, bucket_type='invoice'):
-        """Get S3 bucket name with account and region suffix"""
+        """Get S3 bucket name with region suffix"""
         base_name = self.S3_INVOICE_BUCKET if bucket_type == 'invoice' else self.S3_FRONTEND_BUCKET
-        return f"{base_name}-{self.AWS_ACCOUNT}-{self.AWS_REGION}"
+        return f"{base_name}-{self.AWS_REGION}"
 
 def get_config():
     """Get configuration instance"""

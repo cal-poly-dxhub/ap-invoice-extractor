@@ -6,11 +6,6 @@ from config import get_config
 config = get_config()
 app = App()
 
-InvoiceProcessorStack(app, config.get_stack_name(),
-    env={
-        "account": config.AWS_ACCOUNT,
-        "region": config.AWS_REGION
-    }
-)
+InvoiceProcessorStack(app, config.get_stack_name())
 
 app.synth()

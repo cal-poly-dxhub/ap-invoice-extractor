@@ -69,6 +69,16 @@ class InvoiceProcessorStack(Stack):
                             resources=["*"]
                         )
                     ]
+                ),
+                "TextractAccess": iam.PolicyDocument(
+                    statements=[
+                        iam.PolicyStatement(
+                            actions=[
+                                "textract:DetectDocumentText"
+                            ],
+                            resources=["*"]
+                        )
+                    ]
                 )
             }
         )

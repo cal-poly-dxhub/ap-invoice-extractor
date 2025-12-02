@@ -48,6 +48,7 @@ const InvoiceProcessor = ({ files, isProcessing, onProcessed, onProcessingComple
             rawText: result.raw_text || '',  // Add raw text for preview
             validation: result.validation || null,  // Add validation data
             extraction_metadata: result.extraction_metadata || {},  // Add metadata for page count
+            extraction_method: result.extraction_method || 'unknown',  // Add extraction method
             fileBase64: result.file_data || fileContent  // Use file_data from response, fallback to original
           };
           processedResults.push(resultWithStatus);

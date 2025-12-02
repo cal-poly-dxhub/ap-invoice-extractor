@@ -6,11 +6,17 @@ import tempfile
 import hashlib
 from datetime import datetime
 from typing import Dict, Any
-from pypdf import PdfReader
+
+try:
+    from PyPDF2 import PdfReader
+    PYPDF2_AVAILABLE = True
+except ImportError:
+    PYPDF2_AVAILABLE = False
 
 # Initialize AWS clients
 s3_client = boto3.client('s3')
 bedrock_client = boto3.client('bedrock-runtime')
+textract_client = boto3.client('textract')
 
 # Environment variables
 S3_BUCKET = os.environ['S3_BUCKET_NAME']
@@ -86,7 +92,7 @@ def process_document(event):
         file_content = base64.b64decode(file_data)
         
         # Extract text
-        raw_text = extract_text_from_pdf(file_content)
+        raw_text, extraction_method = extract_text_from_pdf(file_content)
         
         # Extract structured data using AI
         structured_data = extract_structured_data(raw_text)
@@ -103,7 +109,8 @@ def process_document(event):
                 'session_id': session_id,
                 'structured_data': structured_data,
                 'raw_text': raw_text,
-                'file_data': file_data
+                'file_data': file_data,
+                'extraction_method': extraction_method
             })
         }
         
@@ -284,20 +291,56 @@ def delete_session(event):
         }
 
 def extract_text_from_pdf(file_content):
-    """Extract text from PDF using pypdf"""
-    try:
-        with tempfile.NamedTemporaryFile() as temp_file:
-            temp_file.write(file_content)
-            temp_file.flush()
-            
-            with open(temp_file.name, 'rb') as pdf_file:
-                reader = PdfReader(pdf_file)
+    """Extract text from PDF - try PyPDF2 first, fallback to Textract"""
+    
+    extraction_method = "unknown"
+    
+    # Try PyPDF2 first (fast and free)
+    if PYPDF2_AVAILABLE:
+        try:
+            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_file:
+                temp_file.write(file_content)
+                temp_file.flush()
+                
+                reader = PdfReader(temp_file.name)
                 text = ""
+                
+                # Try to extract from all pages
                 for page in reader.pages:
-                    text += page.extract_text() + "\n"
-                return text.strip()
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
+                
+                os.unlink(temp_file.name)
+                
+                # Success criteria: got text and it's not just whitespace
+                if text.strip():
+                    # # Check if we got meaningful text (not just random characters)
+                    # alphanumeric_count = sum(c.isalnum() for c in text)
+                    # if alphanumeric_count > 20:  # At least 20 alphanumeric characters
+                    extraction_method = "PyPDF2"
+                    return text.strip(), extraction_method
+                        
+        except Exception as e:
+            # PyPDF2 failed - likely encrypted, signed, or corrupted
+            print(f"PyPDF2 failed: {str(e)}")
+            pass  # Fall through to Textract
+    
+    # Fallback to Textract for complex/encrypted/signed PDFs
+    try:
+        response = textract_client.detect_document_text(
+            Document={'Bytes': file_content}
+        )
+        
+        text = ""
+        for block in response.get('Blocks', []):
+            if block['BlockType'] == 'LINE':
+                text += block.get('Text', '') + "\n"
+        
+        extraction_method = "Textract"
+        return (text.strip() if text.strip() else "No text found in document"), extraction_method
     except Exception as e:
-        return f"Error extracting text: {str(e)}"
+        return f"Error extracting text: {str(e)}", "error"
 
 def extract_structured_data(raw_text):
     """Extract structured data using Nova Lite with Claude fallback"""
