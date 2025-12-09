@@ -14,6 +14,26 @@ const PDFPreview = ({ invoice, onClose }) => {
   const [numPages, setNumPages] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
 
+  const safeText = (val) => {
+    if (val === null || val === undefined) return '';
+    if (typeof val === 'object') {
+      try {
+        return JSON.stringify(val);
+      } catch {
+        return String(val);
+      }
+    }
+    return String(val);
+  };
+
+  const safeCurrency = (val) => {
+    const num = Number(val);
+    if (Number.isFinite(num)) {
+      return `$${num.toFixed(2)}`;
+    }
+    return '$0.00';
+  };
+
   const handleZoomIn = () => {
     setScale(prev => Math.min(prev + 0.2, 3.0));
   };
@@ -242,20 +262,20 @@ const PDFPreview = ({ invoice, onClose }) => {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-blue-700">Vendor:</span>
-                        <span className="font-medium">{invoice.data.vendor_name || 'N/A'}</span>
+                        <span className="font-medium">{safeText(invoice.data.vendor_name) || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-blue-700">Invoice #:</span>
-                        <span className="font-medium">{invoice.data.invoice_number || 'N/A'}</span>
+                        <span className="font-medium">{safeText(invoice.data.invoice_number) || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-blue-700">Date:</span>
-                        <span className="font-medium">{invoice.data.date || 'N/A'}</span>
+                        <span className="font-medium">{safeText(invoice.data.date) || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-blue-700">Total:</span>
                         <span className="font-medium text-green-600">
-                          ${invoice.data.total_amount?.toFixed(2) || '0.00'}
+                          {safeCurrency(invoice.data.total_amount)}
                         </span>
                       </div>
                     </div>
@@ -268,11 +288,11 @@ const PDFPreview = ({ invoice, onClose }) => {
                       <div className="space-y-2">
                         {invoice.data.line_items.map((item, index) => (
                           <div key={index} className="text-sm border-b border-green-200 pb-2 last:border-b-0">
-                            <div className="font-medium text-green-900">{item.description}</div>
+                            <div className="font-medium text-green-900">{safeText(item.description)}</div>
                             <div className="flex justify-between text-green-700 mt-1">
-                              <span>Qty: {item.quantity}</span>
-                              <span>Unit: ${item.unit_price?.toFixed(2) || '0.00'}</span>
-                              <span className="font-medium">Total: ${item.total?.toFixed(2) || '0.00'}</span>
+                              <span>Qty: {safeText(item.quantity)}</span>
+                              <span>Unit: {safeCurrency(item.unit_price)}</span>
+                              <span className="font-medium">Total: {safeCurrency(item.total)}</span>
                             </div>
                           </div>
                         ))}
@@ -303,7 +323,11 @@ const PDFPreview = ({ invoice, onClose }) => {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-purple-700">Confidence:</span>
-                          <span className="font-medium">{(invoice.validation.confidence_score * 100).toFixed(1)}%</span>
+                          <span className="font-medium">
+                            {Number.isFinite(invoice.validation.confidence_score)
+                              ? `${(invoice.validation.confidence_score * 100).toFixed(1)}%`
+                              : 'N/A'}
+                          </span>
                         </div>
                         
                         {invoice.validation.suggestions && invoice.validation.suggestions.length > 0 && (

@@ -39,10 +39,19 @@ const InvoiceProcessor = ({ files, isProcessing, onProcessed, onProcessingComple
         if (result.success) {
           
           // Map the structured_data to data for UI compatibility
+          const structured = result.structured_data || {};
+          // Handle cases where "date" itself is an object with invoice_date/due_date
+          let displayDate = structured.invoice_date || structured.date || structured.due_date || '';
+          if (displayDate && typeof displayDate === 'object') {
+            displayDate = displayDate.invoice_date || displayDate.date || displayDate.due_date || '';
+          }
           const resultWithStatus = {
             ...result,
             status: 'success',
-            data: result.structured_data || {},  // Map structured_data to data
+            data: {
+              ...structured,
+              date: displayDate  // Prefer invoice_date, then date, then due_date
+            },
             id: result.document_id || file.id,  // Use document_id from backend, fallback to file.id
             document_name: result.document_name || file.name,
             rawText: result.raw_text || '',  // Add raw text for preview
@@ -50,6 +59,13 @@ const InvoiceProcessor = ({ files, isProcessing, onProcessed, onProcessingComple
             extraction_metadata: result.extraction_metadata || {},  // Add metadata for page count
             fileBase64: result.file_data || fileContent  // Use file_data from response, fallback to original
           };
+          console.log('✅ Processed invoice', {
+            name: file.name,
+            id: resultWithStatus.id,
+            hasRawText: Boolean(resultWithStatus.rawText),
+            hasFileData: Boolean(resultWithStatus.fileBase64),
+            structuredKeys: Object.keys(resultWithStatus.data || {})
+          });
           processedResults.push(resultWithStatus);
           
           // Update status to completed
@@ -74,14 +90,23 @@ const InvoiceProcessor = ({ files, isProcessing, onProcessed, onProcessingComple
           }));
         }
       } catch (error) {
-        
-        processedResults.push({
+        console.error('Document processing failed', {
+          file: file.name,
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status
+        });
+
+        const errorMessage = error.response?.data?.error || error.message || 'Processing failed';
+        const errorResult = {
           id: file.id,  // Keep file.id for error cases since no document_id from backend
           document_name: file.name,
           status: 'error',
-          error: error.message || 'Processing failed',
+          error: errorMessage,
           data: {}
-        });
+        };
+        console.log('❌ Processing error', errorResult);
+        processedResults.push(errorResult);
         
         setProcessingStatus(prev => ({
           ...prev,

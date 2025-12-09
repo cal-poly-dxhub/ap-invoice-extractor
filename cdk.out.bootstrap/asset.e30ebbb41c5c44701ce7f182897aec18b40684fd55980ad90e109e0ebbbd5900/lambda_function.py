@@ -98,8 +98,8 @@ def process_document(event):
                 })
             }
         
-        # Extract structured data using AI and normalize fields for UI consumption
-        structured_data = normalize_structured_data(extract_structured_data(raw_text))
+        # Extract structured data using AI
+        structured_data = extract_structured_data(raw_text)
         
         # Store in S3
         doc_id = store_document(file_content, file_name, session_id, raw_text, structured_data)
@@ -332,82 +332,6 @@ def extract_structured_data(raw_text):
         
     except Exception as e:
         return {'error': str(e)}
-
-def normalize_structured_data(data: Any) -> Dict[str, Any]:
-    """
-    Normalize AI-extracted structured data into the shape the UI expects.
-    - Prefer invoice_date over due_date and fall back to date.
-    - Ensure totals are numeric.
-    - Coerce non-primitive fields to strings to avoid React render crashes.
-    """
-    if not isinstance(data, dict):
-        return {}
-
-    def to_text(val):
-        if val is None:
-            return ""
-        if isinstance(val, (str, int, float, bool)):
-            return str(val)
-        try:
-            return json.dumps(val)
-        except Exception:
-            return str(val)
-
-    def pick_date(value):
-        """
-        Handle dates that might be plain strings or nested objects like
-        {"invoice_date": "...", "due_date": "..."} coming back from AI.
-        """
-        if isinstance(value, dict):
-            # Prefer explicit invoice_date/due_date keys inside the object
-            inner = value.get("invoice_date") or value.get("date") or value.get("due_date")
-            if inner:
-                return to_text(inner)
-        return to_text(value)
-
-    # Date preference: invoice_date > date > due_date
-    date_val = data.get('invoice_date') or data.get('date') or data.get('due_date') or ""
-    date_str = pick_date(date_val)
-
-    # Total amount as float if possible
-    total_raw = data.get('total_amount')
-    try:
-        total_amount = float(total_raw)
-    except (TypeError, ValueError):
-        total_amount = 0.0
-
-    # Line items
-    line_items_raw = data.get('line_items') or []
-    line_items = []
-    if isinstance(line_items_raw, list):
-        for item in line_items_raw:
-            if not isinstance(item, dict):
-                continue
-            line_items.append({
-                "description": to_text(item.get('description')),
-                "quantity": to_text(item.get('quantity')),
-                "rate": to_text(item.get('rate')),
-                "amount": to_text(item.get('amount')),
-                "unit_price": to_text(item.get('unit_price')),
-                "total": to_text(item.get('total')),
-            })
-
-    normalized = {
-        "vendor_name": to_text(data.get('vendor_name')),
-        "invoice_number": to_text(data.get('invoice_number')),
-        "payment_terms": to_text(data.get('payment_terms')),
-        "date": date_str,
-        "total_amount": total_amount,
-        "line_items": line_items
-    }
-
-    # Preserve original invoice_date/due_date fields as strings if present for debugging
-    if 'invoice_date' in data:
-        normalized['invoice_date'] = to_text(data.get('invoice_date'))
-    if 'due_date' in data:
-        normalized['due_date'] = to_text(data.get('due_date'))
-
-    return normalized
 
 def call_nova_lite(raw_text):
     """Call Nova Lite for extraction"""

@@ -1,0 +1,1541 @@
+{
+ "Resources": {
+  "InvoiceBucket0B5E66FA": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketName": "invoice-processor-documents-dev-475553617138-us-west-2",
+    "LifecycleConfiguration": {
+     "Rules": [
+      {
+       "ExpirationInDays": 7,
+       "Id": "DeleteOldSessions",
+       "Status": "Enabled"
+      }
+     ]
+    }
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceBucket/Resource"
+   }
+  },
+  "InvoiceProcessorLambdaRole55A4E7F1": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Policies": [
+     {
+      "PolicyDocument": {
+       "Statement": [
+        {
+         "Action": [
+          "s3:DeleteObject",
+          "s3:GetObject",
+          "s3:ListBucket",
+          "s3:PutObject"
+         ],
+         "Effect": "Allow",
+         "Resource": [
+          {
+           "Fn::GetAtt": [
+            "InvoiceBucket0B5E66FA",
+            "Arn"
+           ]
+          },
+          {
+           "Fn::Join": [
+            "",
+            [
+             {
+              "Fn::GetAtt": [
+               "InvoiceBucket0B5E66FA",
+               "Arn"
+              ]
+             },
+             "/*"
+            ]
+           ]
+          }
+         ]
+        }
+       ],
+       "Version": "2012-10-17"
+      },
+      "PolicyName": "S3Access"
+     },
+     {
+      "PolicyDocument": {
+       "Statement": [
+        {
+         "Action": "bedrock:InvokeModel",
+         "Effect": "Allow",
+         "Resource": "*"
+        }
+       ],
+       "Version": "2012-10-17"
+      },
+      "PolicyName": "BedrockAccess"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorLambdaRole/Resource"
+   }
+  },
+  "PythonDepsLayer6FFA5A02": {
+   "Type": "AWS::Lambda::LayerVersion",
+   "Properties": {
+    "CompatibleRuntimes": [
+     "python3.9"
+    ],
+    "Content": {
+     "S3Bucket": "cdk-hnb659fds-assets-475553617138-us-west-2",
+     "S3Key": "04dc5097346a89f5198bbc7e72946bf89c4055b89eff94b2f523ba61a0ba6d18.zip"
+    },
+    "Description": "Python dependencies for invoice processing"
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/PythonDepsLayer/Resource",
+    "aws:asset:path": "/home/jchan/dev/dxhub/ap-invoice-extractor/lambda-layers/python-deps",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Content"
+   }
+  },
+  "InvoiceProcessorLambda1CB20970": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "x86_64"
+    ],
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-475553617138-us-west-2",
+     "S3Key": "e30ebbb41c5c44701ce7f182897aec18b40684fd55980ad90e109e0ebbbd5900.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "S3_BUCKET_NAME": {
+       "Ref": "InvoiceBucket0B5E66FA"
+      },
+      "NOVA_LITE_MODEL": "us.amazon.nova-lite-v1:0",
+      "CLAUDE_SONNET_MODEL": "us.amazon.nova-lite-v1:0",
+      "CLAUDE_HAIKU_MODEL": "us.amazon.nova-lite-v1:0"
+     }
+    },
+    "Handler": "lambda_function.lambda_handler",
+    "Layers": [
+     {
+      "Ref": "PythonDepsLayer6FFA5A02"
+     }
+    ],
+    "MemorySize": 1024,
+    "Role": {
+     "Fn::GetAtt": [
+      "InvoiceProcessorLambdaRole55A4E7F1",
+      "Arn"
+     ]
+    },
+    "Runtime": "python3.9",
+    "Timeout": 300
+   },
+   "DependsOn": [
+    "InvoiceProcessorLambdaRole55A4E7F1"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorLambda/Resource",
+    "aws:asset:path": "asset.e30ebbb41c5c44701ce7f182897aec18b40684fd55980ad90e109e0ebbbd5900",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code"
+   }
+  },
+  "InvoiceProcessorLambdaApiGatewayInvoke4B953ECD": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "InvoiceProcessorLambda1CB20970",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-west-2:475553617138:",
+       {
+        "Ref": "InvoiceProcessorApi47F73B32"
+       },
+       "/*/*/*/*/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorLambda/ApiGatewayInvoke"
+   }
+  },
+  "InvoiceProcessorApi47F73B32": {
+   "Type": "AWS::ApiGateway::RestApi",
+   "Properties": {
+    "Name": "InvoiceProcessorAPI"
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Resource"
+   }
+  },
+  "InvoiceProcessorApiDeployment756BA10D5eb494b39a51361f56f6b2914d93d55d": {
+   "Type": "AWS::ApiGateway::Deployment",
+   "Properties": {
+    "Description": "Automatically created by the RestApi construct",
+    "RestApiId": {
+     "Ref": "InvoiceProcessorApi47F73B32"
+    }
+   },
+   "DependsOn": [
+    "InvoiceProcessorApichatOPTIONS187E68E5",
+    "InvoiceProcessorApichatPOST89F1849C",
+    "InvoiceProcessorApichatE15AB967",
+    "InvoiceProcessorApiOPTIONS5FC6DA35",
+    "InvoiceProcessorApiprocessdocumentOPTIONSE5D5E9F7",
+    "InvoiceProcessorApiprocessdocumentPOSTD4B9E4F4",
+    "InvoiceProcessorApiprocessdocument5365805F",
+    "InvoiceProcessorApisessionsessionIddeleteDELETE4728D63D",
+    "InvoiceProcessorApisessionsessionIddeleteOPTIONS305F3ED7",
+    "InvoiceProcessorApisessionsessionIddelete6A037450",
+    "InvoiceProcessorApisessionsessionIdOPTIONS6ACB508C",
+    "InvoiceProcessorApisessionsessionIdE29CF133",
+    "InvoiceProcessorApisessionOPTIONS9AE7EE6F",
+    "InvoiceProcessorApisession493B7C39",
+    "InvoiceProcessorApiupdatedocumentOPTIONS4EF1D444",
+    "InvoiceProcessorApiupdatedocumentPOST36C43659",
+    "InvoiceProcessorApiupdatedocumentD351B2F8"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Deployment/Resource",
+    "aws:cdk:do-not-refactor": true
+   }
+  },
+  "InvoiceProcessorApiDeploymentStageprodF164CB91": {
+   "Type": "AWS::ApiGateway::Stage",
+   "Properties": {
+    "DeploymentId": {
+     "Ref": "InvoiceProcessorApiDeployment756BA10D5eb494b39a51361f56f6b2914d93d55d"
+    },
+    "RestApiId": {
+     "Ref": "InvoiceProcessorApi47F73B32"
+    },
+    "StageName": "prod"
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/DeploymentStage.prod/Resource"
+   }
+  },
+  "InvoiceProcessorApiOPTIONS5FC6DA35": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST,GET,DELETE'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Fn::GetAtt": [
+      "InvoiceProcessorApi47F73B32",
+      "RootResourceId"
+     ]
+    },
+    "RestApiId": {
+     "Ref": "InvoiceProcessorApi47F73B32"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/OPTIONS/Resource"
+   }
+  },
+  "InvoiceProcessorApiprocessdocument5365805F": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "InvoiceProcessorApi47F73B32",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "process-document",
+    "RestApiId": {
+     "Ref": "InvoiceProcessorApi47F73B32"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/process-document/Resource"
+   }
+  },
+  "InvoiceProcessorApiprocessdocumentOPTIONSE5D5E9F7": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST,GET,DELETE'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "InvoiceProcessorApiprocessdocument5365805F"
+    },
+    "RestApiId": {
+     "Ref": "InvoiceProcessorApi47F73B32"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/process-document/OPTIONS/Resource"
+   }
+  },
+  "InvoiceProcessorApiprocessdocumentPOSTApiPermissionInvoiceProcessorStackdevInvoiceProcessorApiBE0844A5POSTprocessdocument715A5925": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "InvoiceProcessorLambda1CB20970",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-west-2:475553617138:",
+       {
+        "Ref": "InvoiceProcessorApi47F73B32"
+       },
+       "/",
+       {
+        "Ref": "InvoiceProcessorApiDeploymentStageprodF164CB91"
+       },
+       "/POST/process-document"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/process-document/POST/ApiPermission.InvoiceProcessorStackdevInvoiceProcessorApiBE0844A5.POST..process-document"
+   }
+  },
+  "InvoiceProcessorApiprocessdocumentPOSTApiPermissionTestInvoiceProcessorStackdevInvoiceProcessorApiBE0844A5POSTprocessdocument773E15C6": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "InvoiceProcessorLambda1CB20970",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-west-2:475553617138:",
+       {
+        "Ref": "InvoiceProcessorApi47F73B32"
+       },
+       "/test-invoke-stage/POST/process-document"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/process-document/POST/ApiPermission.Test.InvoiceProcessorStackdevInvoiceProcessorApiBE0844A5.POST..process-document"
+   }
+  },
+  "InvoiceProcessorApiprocessdocumentPOSTD4B9E4F4": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "POST",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:aws:apigateway:us-west-2:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "InvoiceProcessorLambda1CB20970",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "InvoiceProcessorApiprocessdocument5365805F"
+    },
+    "RestApiId": {
+     "Ref": "InvoiceProcessorApi47F73B32"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/process-document/POST/Resource"
+   }
+  },
+  "InvoiceProcessorApiupdatedocumentD351B2F8": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "InvoiceProcessorApi47F73B32",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "update-document",
+    "RestApiId": {
+     "Ref": "InvoiceProcessorApi47F73B32"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/update-document/Resource"
+   }
+  },
+  "InvoiceProcessorApiupdatedocumentOPTIONS4EF1D444": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST,GET,DELETE'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "InvoiceProcessorApiupdatedocumentD351B2F8"
+    },
+    "RestApiId": {
+     "Ref": "InvoiceProcessorApi47F73B32"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/update-document/OPTIONS/Resource"
+   }
+  },
+  "InvoiceProcessorApiupdatedocumentPOSTApiPermissionInvoiceProcessorStackdevInvoiceProcessorApiBE0844A5POSTupdatedocument140C8A2C": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "InvoiceProcessorLambda1CB20970",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-west-2:475553617138:",
+       {
+        "Ref": "InvoiceProcessorApi47F73B32"
+       },
+       "/",
+       {
+        "Ref": "InvoiceProcessorApiDeploymentStageprodF164CB91"
+       },
+       "/POST/update-document"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/update-document/POST/ApiPermission.InvoiceProcessorStackdevInvoiceProcessorApiBE0844A5.POST..update-document"
+   }
+  },
+  "InvoiceProcessorApiupdatedocumentPOSTApiPermissionTestInvoiceProcessorStackdevInvoiceProcessorApiBE0844A5POSTupdatedocument943595B0": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "InvoiceProcessorLambda1CB20970",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-west-2:475553617138:",
+       {
+        "Ref": "InvoiceProcessorApi47F73B32"
+       },
+       "/test-invoke-stage/POST/update-document"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/update-document/POST/ApiPermission.Test.InvoiceProcessorStackdevInvoiceProcessorApiBE0844A5.POST..update-document"
+   }
+  },
+  "InvoiceProcessorApiupdatedocumentPOST36C43659": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "POST",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:aws:apigateway:us-west-2:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "InvoiceProcessorLambda1CB20970",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "InvoiceProcessorApiupdatedocumentD351B2F8"
+    },
+    "RestApiId": {
+     "Ref": "InvoiceProcessorApi47F73B32"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/update-document/POST/Resource"
+   }
+  },
+  "InvoiceProcessorApichatE15AB967": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "InvoiceProcessorApi47F73B32",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "chat",
+    "RestApiId": {
+     "Ref": "InvoiceProcessorApi47F73B32"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/chat/Resource"
+   }
+  },
+  "InvoiceProcessorApichatOPTIONS187E68E5": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST,GET,DELETE'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "InvoiceProcessorApichatE15AB967"
+    },
+    "RestApiId": {
+     "Ref": "InvoiceProcessorApi47F73B32"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/chat/OPTIONS/Resource"
+   }
+  },
+  "InvoiceProcessorApichatPOSTApiPermissionInvoiceProcessorStackdevInvoiceProcessorApiBE0844A5POSTchat472D4294": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "InvoiceProcessorLambda1CB20970",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-west-2:475553617138:",
+       {
+        "Ref": "InvoiceProcessorApi47F73B32"
+       },
+       "/",
+       {
+        "Ref": "InvoiceProcessorApiDeploymentStageprodF164CB91"
+       },
+       "/POST/chat"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/chat/POST/ApiPermission.InvoiceProcessorStackdevInvoiceProcessorApiBE0844A5.POST..chat"
+   }
+  },
+  "InvoiceProcessorApichatPOSTApiPermissionTestInvoiceProcessorStackdevInvoiceProcessorApiBE0844A5POSTchat15ADCBBF": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "InvoiceProcessorLambda1CB20970",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-west-2:475553617138:",
+       {
+        "Ref": "InvoiceProcessorApi47F73B32"
+       },
+       "/test-invoke-stage/POST/chat"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/chat/POST/ApiPermission.Test.InvoiceProcessorStackdevInvoiceProcessorApiBE0844A5.POST..chat"
+   }
+  },
+  "InvoiceProcessorApichatPOST89F1849C": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "POST",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:aws:apigateway:us-west-2:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "InvoiceProcessorLambda1CB20970",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "InvoiceProcessorApichatE15AB967"
+    },
+    "RestApiId": {
+     "Ref": "InvoiceProcessorApi47F73B32"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/chat/POST/Resource"
+   }
+  },
+  "InvoiceProcessorApisession493B7C39": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "InvoiceProcessorApi47F73B32",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "session",
+    "RestApiId": {
+     "Ref": "InvoiceProcessorApi47F73B32"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/session/Resource"
+   }
+  },
+  "InvoiceProcessorApisessionOPTIONS9AE7EE6F": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST,GET,DELETE'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "InvoiceProcessorApisession493B7C39"
+    },
+    "RestApiId": {
+     "Ref": "InvoiceProcessorApi47F73B32"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/session/OPTIONS/Resource"
+   }
+  },
+  "InvoiceProcessorApisessionsessionIdE29CF133": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Ref": "InvoiceProcessorApisession493B7C39"
+    },
+    "PathPart": "{sessionId}",
+    "RestApiId": {
+     "Ref": "InvoiceProcessorApi47F73B32"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/session/{sessionId}/Resource"
+   }
+  },
+  "InvoiceProcessorApisessionsessionIdOPTIONS6ACB508C": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST,GET,DELETE'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "InvoiceProcessorApisessionsessionIdE29CF133"
+    },
+    "RestApiId": {
+     "Ref": "InvoiceProcessorApi47F73B32"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/session/{sessionId}/OPTIONS/Resource"
+   }
+  },
+  "InvoiceProcessorApisessionsessionIddelete6A037450": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Ref": "InvoiceProcessorApisessionsessionIdE29CF133"
+    },
+    "PathPart": "delete",
+    "RestApiId": {
+     "Ref": "InvoiceProcessorApi47F73B32"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/session/{sessionId}/delete/Resource"
+   }
+  },
+  "InvoiceProcessorApisessionsessionIddeleteOPTIONS305F3ED7": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST,GET,DELETE'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "InvoiceProcessorApisessionsessionIddelete6A037450"
+    },
+    "RestApiId": {
+     "Ref": "InvoiceProcessorApi47F73B32"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/session/{sessionId}/delete/OPTIONS/Resource"
+   }
+  },
+  "InvoiceProcessorApisessionsessionIddeleteDELETEApiPermissionInvoiceProcessorStackdevInvoiceProcessorApiBE0844A5DELETEsessionsessionIddeleteC2B8B295": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "InvoiceProcessorLambda1CB20970",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-west-2:475553617138:",
+       {
+        "Ref": "InvoiceProcessorApi47F73B32"
+       },
+       "/",
+       {
+        "Ref": "InvoiceProcessorApiDeploymentStageprodF164CB91"
+       },
+       "/DELETE/session/*/delete"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/session/{sessionId}/delete/DELETE/ApiPermission.InvoiceProcessorStackdevInvoiceProcessorApiBE0844A5.DELETE..session.{sessionId}.delete"
+   }
+  },
+  "InvoiceProcessorApisessionsessionIddeleteDELETEApiPermissionTestInvoiceProcessorStackdevInvoiceProcessorApiBE0844A5DELETEsessionsessionIddelete48A9A1C8": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "InvoiceProcessorLambda1CB20970",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:aws:execute-api:us-west-2:475553617138:",
+       {
+        "Ref": "InvoiceProcessorApi47F73B32"
+       },
+       "/test-invoke-stage/DELETE/session/*/delete"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/session/{sessionId}/delete/DELETE/ApiPermission.Test.InvoiceProcessorStackdevInvoiceProcessorApiBE0844A5.DELETE..session.{sessionId}.delete"
+   }
+  },
+  "InvoiceProcessorApisessionsessionIddeleteDELETE4728D63D": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "DELETE",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:aws:apigateway:us-west-2:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "InvoiceProcessorLambda1CB20970",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "InvoiceProcessorApisessionsessionIddelete6A037450"
+    },
+    "RestApiId": {
+     "Ref": "InvoiceProcessorApi47F73B32"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/InvoiceProcessorApi/Default/session/{sessionId}/delete/DELETE/Resource"
+   }
+  },
+  "FrontendBucketEFE2E19C": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketName": "invoice-processor-frontend-dev-475553617138-us-west-2",
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    },
+    "Tags": [
+     {
+      "Key": "aws-cdk:cr-owned:0492ab67",
+      "Value": "true"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/FrontendBucket/Resource"
+   }
+  },
+  "FrontendBucketPolicy1DFF75D9": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "FrontendBucketEFE2E19C"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "CanonicalUser": {
+         "Fn::GetAtt": [
+          "FrontendOAIF4D25B13",
+          "S3CanonicalUserId"
+         ]
+        }
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "FrontendBucketEFE2E19C",
+            "Arn"
+           ]
+          },
+          "/*"
+         ]
+        ]
+       }
+      },
+      {
+       "Action": [
+        "s3:GetBucket*",
+        "s3:GetObject*",
+        "s3:List*"
+       ],
+       "Effect": "Allow",
+       "Principal": {
+        "CanonicalUser": {
+         "Fn::GetAtt": [
+          "FrontendOAIF4D25B13",
+          "S3CanonicalUserId"
+         ]
+        }
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "FrontendBucketEFE2E19C",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "FrontendBucketEFE2E19C",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/FrontendBucket/Policy/Resource"
+   }
+  },
+  "FrontendOAIF4D25B13": {
+   "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
+   "Properties": {
+    "CloudFrontOriginAccessIdentityConfig": {
+     "Comment": "OAI for Invoice Processor Frontend"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/FrontendOAI/Resource"
+   }
+  },
+  "FrontendDistributionE6EAF405": {
+   "Type": "AWS::CloudFront::Distribution",
+   "Properties": {
+    "DistributionConfig": {
+     "CustomErrorResponses": [
+      {
+       "ErrorCode": 404,
+       "ResponseCode": 200,
+       "ResponsePagePath": "/index.html"
+      }
+     ],
+     "DefaultCacheBehavior": {
+      "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+      "Compress": true,
+      "TargetOriginId": "InvoiceProcessorStackdevFrontendDistributionOrigin1BC8DBA27",
+      "ViewerProtocolPolicy": "redirect-to-https"
+     },
+     "DefaultRootObject": "index.html",
+     "Enabled": true,
+     "HttpVersion": "http2",
+     "IPV6Enabled": true,
+     "Origins": [
+      {
+       "DomainName": {
+        "Fn::GetAtt": [
+         "FrontendBucketEFE2E19C",
+         "RegionalDomainName"
+        ]
+       },
+       "Id": "InvoiceProcessorStackdevFrontendDistributionOrigin1BC8DBA27",
+       "S3OriginConfig": {
+        "OriginAccessIdentity": {
+         "Fn::Join": [
+          "",
+          [
+           "origin-access-identity/cloudfront/",
+           {
+            "Ref": "FrontendOAIF4D25B13"
+           }
+          ]
+         ]
+        }
+       }
+      }
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/FrontendDistribution/Resource"
+   }
+  },
+  "DeployFrontendAwsCliLayerD774ED8F": {
+   "Type": "AWS::Lambda::LayerVersion",
+   "Properties": {
+    "Content": {
+     "S3Bucket": "cdk-hnb659fds-assets-475553617138-us-west-2",
+     "S3Key": "c49d356cac773d491c5f7ac148995a1181498a8e289429f8612a7f7e3814f535.zip"
+    },
+    "Description": "/opt/awscli/aws"
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/DeployFrontend/AwsCliLayer/Resource",
+    "aws:asset:path": "asset.c49d356cac773d491c5f7ac148995a1181498a8e289429f8612a7f7e3814f535.zip",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Content"
+   }
+  },
+  "DeployFrontendCustomResource3E02C3B7": {
+   "Type": "Custom::CDKBucketDeployment",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C81C01536",
+      "Arn"
+     ]
+    },
+    "SourceBucketNames": [
+     "cdk-hnb659fds-assets-475553617138-us-west-2"
+    ],
+    "SourceObjectKeys": [
+     "15fbf8689627478d18d3bb84b0a59b9088520d71b382b699c3a1a31cbe5e1a28.zip"
+    ],
+    "DestinationBucketName": {
+     "Ref": "FrontendBucketEFE2E19C"
+    },
+    "WaitForDistributionInvalidation": true,
+    "Prune": true,
+    "SystemMetadata": {
+     "cache-control": "no-cache"
+    },
+    "DistributionId": {
+     "Ref": "FrontendDistributionE6EAF405"
+    },
+    "DistributionPaths": [
+     "/*"
+    ],
+    "OutputObjectKeys": true
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/DeployFrontend/CustomResource/Default"
+   }
+  },
+  "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRole89A01265": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/Custom::CDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C/ServiceRole/Resource"
+   }
+  },
+  "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRoleDefaultPolicy88902FDF": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "s3:GetBucket*",
+        "s3:GetObject*",
+        "s3:List*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        "arn:aws:s3:::cdk-hnb659fds-assets-475553617138-us-west-2",
+        "arn:aws:s3:::cdk-hnb659fds-assets-475553617138-us-west-2/*"
+       ]
+      },
+      {
+       "Action": [
+        "s3:Abort*",
+        "s3:DeleteObject*",
+        "s3:GetBucket*",
+        "s3:GetObject*",
+        "s3:List*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "FrontendBucketEFE2E19C",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "FrontendBucketEFE2E19C",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "cloudfront:CreateInvalidation",
+        "cloudfront:GetInvalidation"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRoleDefaultPolicy88902FDF",
+    "Roles": [
+     {
+      "Ref": "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRole89A01265"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/Custom::CDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C81C01536": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-475553617138-us-west-2",
+     "S3Key": "3423a042b818e31c1e34a19d6689ab2e5f9b70fcbe9e71df66f241b20a200bd9.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "AWS_CA_BUNDLE": "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
+     }
+    },
+    "Handler": "index.handler",
+    "Layers": [
+     {
+      "Ref": "DeployFrontendAwsCliLayerD774ED8F"
+     }
+    ],
+    "Role": {
+     "Fn::GetAtt": [
+      "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRole89A01265",
+      "Arn"
+     ]
+    },
+    "Runtime": "python3.13",
+    "Timeout": 900
+   },
+   "DependsOn": [
+    "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRoleDefaultPolicy88902FDF",
+    "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRole89A01265"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/Custom::CDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C/Resource",
+    "aws:asset:path": "asset.3423a042b818e31c1e34a19d6689ab2e5f9b70fcbe9e71df66f241b20a200bd9",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/21RwYrCMBD9Fu8xi/aw51oRFnZRFPZaYjp2Z02TkkmQUvrvm6TVuuBp3sx7ZF7erPk6W/PVQtxoKavrUuGZ9ycn5JWFUdlTxvuNl1dwrLjoCY1lIwgmeDAKZTcrxn5gKBreH42CSKU6K+8aJZpzJXj/KTqw32AJjY78v37ntXQT8YwPYBukJDmhrhU48+AHRlnZCyJwxPNYWAWtMl0D2vHR6PYxGJhosRYObqILnoFc3mKyPcFZGqdPXUirTh8cQdAbbyWkeL7A/ZgqkhO6s9PLCQ9MKuOrizXBV7+3WKPOpQSijyosQJfyKqJmFzUvFVskZ/Hs78k898Mw701BRKchrqjbe9d6N12hVDH0MlxeKuT5jQqF6Q6s8ORM89r9oQtf028ZX2X8ffFLiEvrg6sG+HGsf1QoqYxmAgAA"
+   },
+   "Metadata": {
+    "aws:cdk:path": "InvoiceProcessorStack-dev/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "InvoiceProcessorApiEndpointE43D3432": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "InvoiceProcessorApi47F73B32"
+      },
+      ".execute-api.us-west-2.",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/",
+      {
+       "Ref": "InvoiceProcessorApiDeploymentStageprodF164CB91"
+      },
+      "/"
+     ]
+    ]
+   }
+  },
+  "InvoiceLambdaArn": {
+   "Description": "Invoice processor Lambda function ARN",
+   "Value": {
+    "Fn::GetAtt": [
+     "InvoiceProcessorLambda1CB20970",
+     "Arn"
+    ]
+   }
+  },
+  "ApiUrl": {
+   "Description": "API Gateway URL",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "InvoiceProcessorApi47F73B32"
+      },
+      ".execute-api.us-west-2.",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/",
+      {
+       "Ref": "InvoiceProcessorApiDeploymentStageprodF164CB91"
+      },
+      "/"
+     ]
+    ]
+   }
+  },
+  "WebsiteUrl": {
+   "Description": "CloudFront URL",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Fn::GetAtt": [
+        "FrontendDistributionE6EAF405",
+        "DomainName"
+       ]
+      }
+     ]
+    ]
+   }
+  },
+  "S3BucketName": {
+   "Description": "S3 bucket for invoices",
+   "Value": {
+    "Ref": "InvoiceBucket0B5E66FA"
+   }
+  },
+  "FrontendBucketName": {
+   "Description": "S3 bucket for frontend",
+   "Value": {
+    "Ref": "FrontendBucketEFE2E19C"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

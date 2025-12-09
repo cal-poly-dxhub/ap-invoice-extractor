@@ -42,6 +42,18 @@ const InvoiceList = ({ invoices, sessionId = null, onInvoiceUpdate }) => {
     }).format(amount);
   };
 
+  const safeText = (val) => {
+    if (val === null || val === undefined) return '';
+    if (typeof val === 'object') {
+      try {
+        return JSON.stringify(val);
+      } catch {
+        return String(val);
+      }
+    }
+    return String(val);
+  };
+
   const exportToExcel = () => {
     const glReadyData = invoices
       .filter(inv => inv.status === 'success')
@@ -205,11 +217,11 @@ const InvoiceList = ({ invoices, sessionId = null, onInvoiceUpdate }) => {
                 <div className="space-y-2 text-sm">
                   <div>
                     <span className="text-gray-500">Vendor:</span>
-                    <span className="ml-2 font-medium">{invoice.data?.vendor_name || 'Unknown'}</span>
+                    <span className="ml-2 font-medium">{safeText(invoice.data?.vendor_name) || 'Unknown'}</span>
                   </div>
                   <div>
                     <span className="text-gray-500">Invoice #:</span>
-                    <span className="ml-2">{invoice.data?.invoice_number || 'N/A'}</span>
+                    <span className="ml-2">{safeText(invoice.data?.invoice_number) || 'N/A'}</span>
                   </div>
                   <div>
                     <span className="text-gray-500">Amount:</span>
@@ -219,7 +231,7 @@ const InvoiceList = ({ invoices, sessionId = null, onInvoiceUpdate }) => {
                   </div>
                   <div>
                     <span className="text-gray-500">Date:</span>
-                    <span className="ml-2">{invoice.data?.date || 'N/A'}</span>
+                    <span className="ml-2">{safeText(invoice.data?.date) || 'N/A'}</span>
                   </div>
 
                 </div>

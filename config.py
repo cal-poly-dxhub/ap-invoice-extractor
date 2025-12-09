@@ -2,6 +2,7 @@
 Configuration settings for Invoice Processor CDK deployment
 """
 import os
+import re
 import yaml
 from pathlib import Path
 
@@ -88,7 +89,27 @@ class Config:
     def get_s3_bucket_name(self, bucket_type='invoice'):
         """Get S3 bucket name with account and region suffix"""
         base_name = self.S3_INVOICE_BUCKET if bucket_type == 'invoice' else self.S3_FRONTEND_BUCKET
-        return f"{base_name}-{self.AWS_ACCOUNT}-{self.AWS_REGION}"
+        if not self.AWS_ACCOUNT:
+            raise ValueError("AWS account ID is missing. Set CDK_DEFAULT_ACCOUNT or config.aws.account to build a valid bucket name.")
+
+        parts = [base_name, self.AWS_ACCOUNT]
+
+        if self.AWS_REGION:
+            parts.append(self.AWS_REGION)
+
+        raw_name = "-".join(parts)
+        return self._sanitize_bucket_name(raw_name)
+
+    @staticmethod
+    def _sanitize_bucket_name(name: str) -> str:
+        """Ensure bucket name conforms to S3 requirements"""
+        cleaned = re.sub(r"[^a-z0-9.-]", "-", name.lower())
+        cleaned = re.sub(r"[.-]{2,}", "-", cleaned).strip(".-")
+
+        if not 3 <= len(cleaned) <= 63:
+            raise ValueError(f"S3 bucket name '{cleaned}' must be between 3 and 63 characters after sanitization.")
+
+        return cleaned
 
 def get_config():
     """Get configuration instance"""
