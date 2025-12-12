@@ -64,6 +64,8 @@ frontend/build/
 frontend/npm-debug.log*
 frontend/yarn-debug.log*
 frontend/yarn-error.log*
+# Keep source checked in despite the global *.js ignore
+!frontend/src/**/*.js
 
 # AWS
 .aws/
